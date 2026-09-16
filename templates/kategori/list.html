@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Kategori</h1>
+
+<form method="POST">
+    <label>Nama Kategori:</label>
+    <input type="text" name="nama" required>
+
+    <label>Jenis:</label>
+    <select name="jenis" required>
+        <option value="masuk">Masuk</option>
+        <option value="keluar">Keluar</option>
+    </select>
+
+    <button type="submit">Tambah</button>
+</form>
+
+<table border="1" cellpadding="8">
+    <tr><th>Nama</th><th>Jenis</th></tr>
+    {% for k in kategori %}
+    <tr>
+        <td>{{ k.nama }}</td>
+        <td>{{ k.jenis }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="2">Belum ada kategori. Tambahkan dulu sebelum bisa input transaksi.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

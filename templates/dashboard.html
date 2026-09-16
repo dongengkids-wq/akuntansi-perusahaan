@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Dashboard Kas</h1>
+<div class="ringkasan">
+    <p>Total Masuk: Rp {{ "{:,.0f}".format(sum_masuk) }}</p>
+    <p>Total Keluar: Rp {{ "{:,.0f}".format(sum_keluar) }}</p>
+    <p><strong>Saldo: Rp {{ "{:,.0f}".format(saldo) }}</strong></p>
+</div>
+
+<h2>Transaksi Terakhir</h2>
+<table>
+    <tr><th>Tanggal</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th></tr>
+    {% for t in transaksi %}
+    <tr>
+        <td>{{ t.tanggal }}</td>
+        <td>{{ t.jenis }}</td>
+        <td>Rp {{ "{:,.0f}".format(t.jumlah) }}</td>
+        <td>{{ t.keterangan }}</td>
+    </tr>
+    {% endfor %}
+</table>
+{% endblock %}

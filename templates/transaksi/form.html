@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Tambah Transaksi</h1>
+
+<form method="POST">
+    <label>Tanggal:</label><br>
+    <input type="date" name="tanggal"><br><br>
+
+    <label>Jenis:</label><br>
+    <select name="jenis" required>
+        <option value="masuk">Masuk</option>
+        <option value="keluar">Keluar</option>
+    </select><br><br>
+
+    <label>Kategori:</label><br>
+    <select name="kategori_id" required>
+        {% for k in kategori_list %}
+        <option value="{{ k.id }}">{{ k.nama }} ({{ k.jenis }})</option>
+        {% endfor %}
+    </select><br><br>
+
+    <label>Jumlah:</label><br>
+    <input type="number" name="jumlah" step="0.01" required><br><br>
+
+    <label>Keterangan:</label><br>
+    <textarea name="keterangan"></textarea><br><br>
+
+    <label>Metode:</label><br>
+    <select name="metode">
+        <option value="cash">Cash</option>
+        <option value="transfer">Transfer</option>
+    </select><br><br>
+
+    <button type="submit">Simpan</button>
+</form>
+{% endblock %}

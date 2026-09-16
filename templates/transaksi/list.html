@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Daftar Transaksi</h1>
+<a href="{{ url_for('tambah_transaksi') }}">+ Tambah Transaksi</a>
+
+<table border="1" cellpadding="8">
+    <tr>
+        <th>Tanggal</th>
+        <th>Jenis</th>
+        <th>Kategori</th>
+        <th>Jumlah</th>
+        <th>Keterangan</th>
+        <th>Metode</th>
+    </tr>
+    {% for t in transaksi %}
+    <tr>
+        <td>{{ t.tanggal }}</td>
+        <td>{{ t.jenis }}</td>
+        <td>{{ t.kategori.nama if t.kategori else '-' }}</td>
+        <td>Rp {{ "{:,.0f}".format(t.jumlah) }}</td>
+        <td>{{ t.keterangan or '-' }}</td>
+        <td>{{ t.metode }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6">Belum ada transaksi.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}
