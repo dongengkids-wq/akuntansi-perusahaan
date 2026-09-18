@@ -17,6 +17,11 @@
     </div>
 </div>
 
+<h2>Tren 6 Bulan Terakhir</h2>
+<div class="stat-card" style="margin-bottom: 32px;">
+    <canvas id="trendChart" height="90"></canvas>
+</div>
+
 <h2>Transaksi Terakhir</h2>
 <table class="ledger-table">
     <thead>
@@ -43,4 +48,50 @@
     {% endfor %}
     </tbody>
 </table>
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('trendChart').getContext('2d');
+new Chart(ctx, {
+    type: 'bar',
+    data: {
+        labels: {{ chart_labels | tojson }},
+        datasets: [
+            {
+                label: 'Masuk',
+                data: {{ chart_masuk | tojson }},
+                backgroundColor: '#2F6F4E',
+                borderRadius: 3
+            },
+            {
+                label: 'Keluar',
+                data: {{ chart_keluar | tojson }},
+                backgroundColor: '#9C3B2A',
+                borderRadius: 3
+            }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'bottom', labels: { font: { family: 'IBM Plex Sans' } } }
+        },
+        scales: {
+            y: {
+                ticks: {
+                    callback: function(value) {
+                        return 'Rp ' + value.toLocaleString('id-ID');
+                    },
+                    font: { family: 'IBM Plex Mono' }
+                }
+            },
+            x: {
+                ticks: { font: { family: 'IBM Plex Sans' } }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}
 {% endblock %}

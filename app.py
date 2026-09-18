@@ -10,6 +10,19 @@ app.config.from_object(Config)
 
 supabase = create_client(app.config["SUPABASE_URL"], app.config["SUPABASE_KEY"])
 
+def get_bulan_terakhir(n=6):
+    bulan_list = []
+    today = date.today()
+    y, m = today.year, today.month
+    for i in range(n):
+        bulan_list.append((y, m))
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    bulan_list.reverse()
+    return bulan_list
+
 @app.route("/")
 def dashboard():
     # Hitung total masuk, keluar, dan saldo
@@ -21,11 +34,37 @@ def dashboard():
     sum_keluar = sum(t["jumlah"] for t in total_keluar)
     saldo = sum_masuk - sum_keluar
 
+    # Data untuk chart tren 6 bulan terakhir
+    bulan_list = get_bulan_terakhir(6)
+    awal = date(bulan_list[0][0], bulan_list[0][1], 1)
+    akhir_tahun, akhir_bulan = bulan_list[-1]
+    akhir_hari = calendar.monthrange(akhir_tahun, akhir_bulan)[1]
+    akhir = date(akhir_tahun, akhir_bulan, akhir_hari)
+
+    data_chart = supabase.table("transaksi").select("tanggal, jenis, jumlah") \
+        .gte("tanggal", str(awal)).lte("tanggal", str(akhir)).execute().data
+
+    chart_labels = []
+    chart_masuk = []
+    chart_keluar = []
+    nama_bulan = ["", "Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"]
+
+    for (y, m) in bulan_list:
+        chart_labels.append(f"{nama_bulan[m]} {y}")
+        key = f"{y}-{m:02d}"
+        total_m = sum(t["jumlah"] for t in data_chart if t["jenis"] == "masuk" and t["tanggal"][:7] == key)
+        total_k = sum(t["jumlah"] for t in data_chart if t["jenis"] == "keluar" and t["tanggal"][:7] == key)
+        chart_masuk.append(total_m)
+        chart_keluar.append(total_k)
+
     return render_template("dashboard.html",
                            transaksi=transaksi,
                            sum_masuk=sum_masuk,
                            sum_keluar=sum_keluar,
-                           saldo=saldo)
+                           saldo=saldo,
+                           chart_labels=chart_labels,
+                           chart_masuk=chart_masuk,
+                           chart_keluar=chart_keluar)
 
 @app.route("/transaksi")
 def list_transaksi():
