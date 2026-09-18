@@ -177,6 +177,9 @@ def edit_transaksi(id):
         }
         bukti_url_baru = upload_bukti(request.files.get("bukti"))
         if bukti_url_baru:
+            data_lama = supabase.table("transaksi").select("bukti_url").eq("id", id).single().execute().data
+            if data_lama:
+                hapus_bukti_storage(data_lama.get("bukti_url"))
             data_update["bukti_url"] = bukti_url_baru
 
         supabase.table("transaksi").update(data_update).eq("id", id).execute()
@@ -187,9 +190,25 @@ def edit_transaksi(id):
     return render_template("transaksi/form.html", kategori_list=kategori_list, transaksi=data)
 
 
+def hapus_bukti_storage(bukti_url):
+    """Hapus file bukti dari Supabase Storage berdasarkan URL yang tersimpan."""
+    if not bukti_url:
+        return
+    nama_file = bukti_url.split("/bukti-transaksi/")[-1]
+    if nama_file:
+        try:
+            supabase.storage.from_("bukti-transaksi").remove([nama_file])
+        except Exception as e:
+            print(f"Gagal hapus file storage: {e}")
+
+
 @app.route("/transaksi/hapus/<int:id>", methods=["POST"])
 @login_required
 def hapus_transaksi(id):
+    data = supabase.table("transaksi").select("bukti_url").eq("id", id).single().execute().data
+    if data:
+        hapus_bukti_storage(data.get("bukti_url"))
+
     supabase.table("transaksi").delete().eq("id", id).execute()
     flash("Transaksi berhasil dihapus.", "success")
     return redirect(url_for("list_transaksi"))
