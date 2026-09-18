@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash
 from supabase import create_client
 from config import Config
 from datetime import date
+import calendar
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -73,12 +74,16 @@ def hapus_transaksi(id):
     flash("Transaksi berhasil dihapus.", "success")
     return redirect(url_for("list_transaksi"))
 
+import calendar
+
 @app.route("/laporan")
 def laporan():
     bulan = request.args.get("bulan")  # format: YYYY-MM
     query = supabase.table("transaksi").select("*, kategori(nama)")
     if bulan:
-        query = query.gte("tanggal", f"{bulan}-01").lte("tanggal", f"{bulan}-31")
+        tahun, bln = map(int, bulan.split("-"))
+        hari_terakhir = calendar.monthrange(tahun, bln)[1]  # jumlah hari yg benar di bulan itu
+        query = query.gte("tanggal", f"{bulan}-01").lte("tanggal", f"{bulan}-{hari_terakhir:02d}")
     transaksi = query.order("tanggal").execute().data
 
     rekap = {}
