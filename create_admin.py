@@ -5,9 +5,13 @@ import getpass
 
 supabase = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
 
-username = input("Username: admin")
-nama = input("Nama lengkap: Admin")
-password = getpass.getpass("Password: Admin123")
+username = input("Username: ").strip()
+nama = input("Nama lengkap: ").strip()
+password = getpass.getpass("Password: ").strip()
+
+if not username or not password:
+    print("Username dan password tidak boleh kosong. Dibatalkan.")
+    exit(1)
 
 supabase.table("users").insert({
     "username": username,
