@@ -4,11 +4,61 @@ from config import Config
 from datetime import date
 import calendar
 import uuid
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
 app.config.from_object(Config)
 
 supabase = create_client(app.config["SUPABASE_URL"], app.config["SUPABASE_KEY"])
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "login"
+
+
+class User(UserMixin):
+    def __init__(self, id, username, nama):
+        self.id = id
+        self.username = username
+        self.nama = nama
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    data = supabase.table("users").select("*").eq("id", user_id).single().execute().data
+    if data:
+        return User(data["id"], data["username"], data.get("nama"))
+    return None
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for("dashboard"))
+
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+        data = supabase.table("users").select("*").eq("username", username).execute().data
+        if data and check_password_hash(data[0]["password_hash"], password):
+            user = User(data[0]["id"], data[0]["username"], data[0].get("nama"))
+            login_user(user)
+            flash("Berhasil login.", "success")
+            next_page = request.args.get("next")
+            return redirect(next_page or url_for("dashboard"))
+        flash("Username atau password salah.", "error")
+
+    return render_template("login.html")
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash("Berhasil logout.", "success")
+    return redirect(url_for("login"))
+
 
 def get_bulan_terakhir(n=6):
     bulan_list = []
@@ -23,9 +73,10 @@ def get_bulan_terakhir(n=6):
     bulan_list.reverse()
     return bulan_list
 
+
 @app.route("/")
+@login_required
 def dashboard():
-    # Hitung total masuk, keluar, dan saldo
     transaksi = supabase.table("transaksi").select("*").order("tanggal", desc=True).limit(10).execute().data
     total_masuk = supabase.table("transaksi").select("jumlah").eq("jenis", "masuk").execute().data
     total_keluar = supabase.table("transaksi").select("jumlah").eq("jenis", "keluar").execute().data
@@ -34,7 +85,6 @@ def dashboard():
     sum_keluar = sum(t["jumlah"] for t in total_keluar)
     saldo = sum_masuk - sum_keluar
 
-    # Data untuk chart tren 6 bulan terakhir
     bulan_list = get_bulan_terakhir(6)
     awal = date(bulan_list[0][0], bulan_list[0][1], 1)
     akhir_tahun, akhir_bulan = bulan_list[-1]
@@ -66,27 +116,30 @@ def dashboard():
                            chart_masuk=chart_masuk,
                            chart_keluar=chart_keluar)
 
-@app.route("/transaksi")
-def list_transaksi():
-    data = supabase.table("transaksi").select("*, kategori(nama)").order("tanggal", desc=True).execute().data
-    return render_template("transaksi/list.html", transaksi=data)
 
 def upload_bukti(file):
-    """Upload file bukti ke Supabase Storage, return URL publik atau None."""
     if not file or file.filename == "":
         return None
-
     ext = file.filename.rsplit(".", 1)[-1].lower()
     nama_file = f"{uuid.uuid4()}.{ext}"
-
     file_bytes = file.read()
     supabase.storage.from_("bukti-transaksi").upload(
         nama_file, file_bytes, {"content-type": file.content_type}
     )
     url = supabase.storage.from_("bukti-transaksi").get_public_url(nama_file)
+    url = url.rstrip("?")
     return url
 
+
+@app.route("/transaksi")
+@login_required
+def list_transaksi():
+    data = supabase.table("transaksi").select("*, kategori(nama)").order("tanggal", desc=True).execute().data
+    return render_template("transaksi/list.html", transaksi=data)
+
+
 @app.route("/transaksi/tambah", methods=["GET", "POST"])
+@login_required
 def tambah_transaksi():
     kategori_list = supabase.table("kategori").select("*").execute().data
 
@@ -107,7 +160,9 @@ def tambah_transaksi():
 
     return render_template("transaksi/form.html", kategori_list=kategori_list)
 
+
 @app.route("/transaksi/edit/<int:id>", methods=["GET", "POST"])
+@login_required
 def edit_transaksi(id):
     kategori_list = supabase.table("kategori").select("*").execute().data
 
@@ -131,21 +186,37 @@ def edit_transaksi(id):
     data = supabase.table("transaksi").select("*").eq("id", id).single().execute().data
     return render_template("transaksi/form.html", kategori_list=kategori_list, transaksi=data)
 
+
 @app.route("/transaksi/hapus/<int:id>", methods=["POST"])
+@login_required
 def hapus_transaksi(id):
     supabase.table("transaksi").delete().eq("id", id).execute()
     flash("Transaksi berhasil dihapus.", "success")
     return redirect(url_for("list_transaksi"))
 
-import calendar
+
+@app.route("/kategori", methods=["GET", "POST"])
+@login_required
+def kategori():
+    if request.method == "POST":
+        supabase.table("kategori").insert({
+            "nama": request.form["nama"],
+            "jenis": request.form["jenis"],
+        }).execute()
+        return redirect(url_for("kategori"))
+
+    data = supabase.table("kategori").select("*").execute().data
+    return render_template("kategori/list.html", kategori=data)
+
 
 @app.route("/laporan")
+@login_required
 def laporan():
-    bulan = request.args.get("bulan")  # format: YYYY-MM
+    bulan = request.args.get("bulan")
     query = supabase.table("transaksi").select("*, kategori(nama)")
     if bulan:
         tahun, bln = map(int, bulan.split("-"))
-        hari_terakhir = calendar.monthrange(tahun, bln)[1]  # jumlah hari yg benar di bulan itu
+        hari_terakhir = calendar.monthrange(tahun, bln)[1]
         query = query.gte("tanggal", f"{bulan}-01").lte("tanggal", f"{bulan}-{hari_terakhir:02d}")
     transaksi = query.order("tanggal").execute().data
 
@@ -164,17 +235,6 @@ def laporan():
                            total_keluar=total_keluar,
                            bulan=bulan)
 
-@app.route("/kategori", methods=["GET", "POST"])
-def kategori():
-    if request.method == "POST":
-        supabase.table("kategori").insert({
-            "nama": request.form["nama"],
-            "jenis": request.form["jenis"],
-        }).execute()
-        return redirect(url_for("kategori"))
-
-    data = supabase.table("kategori").select("*").execute().data
-    return render_template("kategori/list.html", kategori=data)
 
 if __name__ == "__main__":
     app.run(debug=True)

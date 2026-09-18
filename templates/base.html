@@ -19,6 +19,10 @@
                 <a href="{{ url_for('kategori') }}" class="{{ 'active' if request.path == url_for('kategori') else '' }}">Kategori</a>
                 <a href="{{ url_for('laporan') }}" class="{{ 'active' if request.path == url_for('laporan') else '' }}">Laporan</a>
             </nav>
+            <div class="sidebar-footer">
+                <span class="sidebar-user">{{ current_user.nama or current_user.username }}</span>
+                <a href="{{ url_for('logout') }}">Keluar</a>
+            </div>
         </aside>
         <main class="content">
             {% with messages = get_flashed_messages(with_categories=true) %}
