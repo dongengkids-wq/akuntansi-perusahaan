@@ -209,6 +209,19 @@ def kategori():
     return render_template("kategori/list.html", kategori=data)
 
 
+@app.route("/kategori/hapus/<int:id>", methods=["POST"])
+@login_required
+def hapus_kategori(id):
+    dipakai = supabase.table("transaksi").select("id").eq("kategori_id", id).limit(1).execute().data
+    if dipakai:
+        flash("Kategori ini tidak bisa dihapus karena masih dipakai di transaksi yang ada.", "error")
+        return redirect(url_for("kategori"))
+
+    supabase.table("kategori").delete().eq("id", id).execute()
+    flash("Kategori berhasil dihapus.", "success")
+    return redirect(url_for("kategori"))
+
+
 @app.route("/laporan")
 @login_required
 def laporan():

@@ -21,7 +21,7 @@
 
 <table class="ledger-table">
     <thead>
-        <tr><th>Nama</th><th>Jenis</th></tr>
+        <tr><th>Nama</th><th>Jenis</th><th>Aksi</th></tr>
     </thead>
     <tbody>
     {% for k in kategori %}
@@ -34,9 +34,14 @@
                 <span class="tag tag-keluar">Keluar</span>
             {% endif %}
         </td>
+        <td>
+            <form method="POST" action="{{ url_for('hapus_kategori', id=k.id) }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin hapus kategori ini?')">Hapus</button>
+            </form>
+        </td>
     </tr>
     {% else %}
-    <tr><td colspan="2">Belum ada kategori. Tambahkan dulu sebelum bisa input transaksi.</td></tr>
+    <tr><td colspan="3">Belum ada kategori. Tambahkan dulu sebelum bisa input transaksi.</td></tr>
     {% endfor %}
     </tbody>
 </table>
