@@ -1,0 +1,296 @@
+:root {
+    --paper: #E9EFE3;
+    --paper-alt: #E0E8D9;
+    --card: #F5F8F0;
+    --rule: #B7C4AC;
+    --ink: #1D2B22;
+    --ink-soft: #55654A;
+    --sidebar: #16241C;
+    --sidebar-text: #E9EFE3;
+    --sidebar-muted: #9DAF90;
+    --accent-primary: #1F3A5F;
+    --accent-primary-hover: #16294A;
+    --accent-masuk: #2F6F4E;
+    --accent-keluar: #9C3B2A;
+    --radius: 4px;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--ink);
+    background-color: var(--paper);
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent,
+        transparent 27px,
+        var(--rule) 27px,
+        var(--rule) 28px
+    );
+}
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--sidebar);
+    color: var(--sidebar-text);
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+}
+
+.brand {
+    font-family: 'Source Serif 4', serif;
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.side-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.side-nav a {
+    color: var(--sidebar-muted);
+    text-decoration: none;
+    padding: 9px 12px;
+    border-radius: var(--radius);
+    font-size: 15px;
+    border-left: 3px solid transparent;
+}
+
+.side-nav a:hover { color: var(--sidebar-text); }
+
+.side-nav a.active {
+    color: var(--sidebar-text);
+    background: rgba(255,255,255,0.06);
+    border-left-color: var(--accent-masuk);
+}
+
+.content {
+    flex: 1;
+    padding: 40px 48px;
+    max-width: 980px;
+}
+
+h1 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 30px;
+    font-weight: 600;
+    margin: 0 0 24px;
+}
+
+h2 {
+    font-family: 'Source Serif 4', serif;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 40px 0 16px;
+}
+
+.card-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
+
+.stat-card {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-top: 3px solid var(--ink-soft);
+    border-radius: var(--radius);
+    padding: 18px 20px;
+    flex: 1;
+    min-width: 180px;
+}
+
+.stat-masuk { border-top-color: var(--accent-masuk); }
+.stat-keluar { border-top-color: var(--accent-keluar); }
+.stat-saldo { border-top-color: var(--accent-primary); }
+
+.stat-label {
+    display: block;
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+}
+
+.stat-value {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.ledger-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.ledger-table th,
+.ledger-table td {
+    padding: 11px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--rule);
+    font-size: 14.5px;
+}
+
+.ledger-table th {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--ink-soft);
+    background: var(--paper-alt);
+}
+
+.ledger-table tbody tr:last-child td { border-bottom: none; }
+.ledger-table tbody tr:hover { background: var(--paper-alt); }
+
+.col-amount {
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    font-variant-numeric: tabular-nums;
+}
+
+.amount-masuk { color: var(--accent-masuk); }
+.amount-keluar { color: var(--accent-keluar); }
+
+.tag {
+    font-size: 13px;
+    padding-left: 8px;
+    border-left: 3px solid currentColor;
+}
+
+.tag-masuk { color: var(--accent-masuk); }
+.tag-keluar { color: var(--accent-keluar); }
+
+.btn {
+    display: inline-block;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 9px 18px;
+    border-radius: var(--radius);
+    border: 1px solid transparent;
+    cursor: pointer;
+    text-decoration: none;
+    color: var(--sidebar-text);
+    background: var(--accent-primary);
+    transition: background 0.15s ease;
+}
+
+.btn:hover { background: var(--accent-primary-hover); }
+
+.btn-danger {
+    background: transparent;
+    color: var(--accent-keluar);
+    border-color: var(--accent-keluar);
+}
+.btn-danger:hover { background: rgba(156,59,42,0.08); }
+
+.btn-link {
+    background: transparent;
+    color: var(--accent-primary);
+    padding: 9px 4px;
+}
+.btn-link:hover { text-decoration: underline; background: transparent; }
+
+.form-card {
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    max-width: 520px;
+    margin-bottom: 28px;
+}
+
+.field { margin-bottom: 18px; }
+
+.field label {
+    display: block;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+}
+
+.field input,
+.field select,
+.field textarea {
+    width: 100%;
+    font-family: 'IBM Plex Sans', sans-serif;
+    font-size: 15px;
+    padding: 9px 12px;
+    border: 1px solid var(--rule);
+    border-radius: var(--radius);
+    background: #fff;
+    color: var(--ink);
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 1px;
+}
+
+.field textarea { min-height: 70px; resize: vertical; }
+
+.field-hint {
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+}
+
+.actions-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.flash {
+    padding: 12px 16px;
+    border-radius: var(--radius);
+    margin-bottom: 20px;
+    font-size: 14px;
+    border-left: 3px solid;
+}
+
+.flash-success {
+    background: rgba(47,111,78,0.08);
+    border-color: var(--accent-masuk);
+    color: var(--accent-masuk);
+}
+
+.flash-error {
+    background: rgba(156,59,42,0.08);
+    border-color: var(--accent-keluar);
+    color: var(--accent-keluar);
+}
+
+@media (max-width: 760px) {
+    .app-shell { flex-direction: column; }
+    .sidebar {
+        width: 100%;
+        flex-direction: row;
+        align-items: center;
+        gap: 20px;
+        padding: 16px 20px;
+        overflow-x: auto;
+    }
+    .side-nav { flex-direction: row; }
+    .content { padding: 24px 20px; }
+    .card-row { flex-direction: column; }
+}

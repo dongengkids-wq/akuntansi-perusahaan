@@ -2,27 +2,52 @@
 {% block content %}
 <h1>Laporan Bulanan</h1>
 
-<form method="GET">
-    <label>Pilih Bulan:</label>
-    <input type="month" name="bulan" value="{{ bulan or '' }}">
-    <button type="submit">Tampilkan</button>
+<form method="GET" class="actions-row" style="margin-bottom: 28px;">
+    <div class="field" style="margin-bottom: 0;">
+        <label for="bulan">Pilih Bulan</label>
+        <input type="month" id="bulan" name="bulan" value="{{ bulan or '' }}">
+    </div>
+    <button type="submit" class="btn" style="margin-top: 20px;">Tampilkan</button>
 </form>
 
-<h3>Total Masuk: Rp {{ "{:,.0f}".format(total_masuk) }}</h3>
-<h3>Total Keluar: Rp {{ "{:,.0f}".format(total_keluar) }}</h3>
-<h3>Saldo: Rp {{ "{:,.0f}".format(total_masuk - total_keluar) }}</h3>
+<div class="card-row">
+    <div class="stat-card stat-masuk">
+        <span class="stat-label">Total Masuk</span>
+        <span class="stat-value">Rp {{ "{:,.0f}".format(total_masuk) }}</span>
+    </div>
+    <div class="stat-card stat-keluar">
+        <span class="stat-label">Total Keluar</span>
+        <span class="stat-value">Rp {{ "{:,.0f}".format(total_keluar) }}</span>
+    </div>
+    <div class="stat-card stat-saldo">
+        <span class="stat-label">Saldo</span>
+        <span class="stat-value">Rp {{ "{:,.0f}".format(total_masuk - total_keluar) }}</span>
+    </div>
+</div>
 
 <h2>Rekap per Kategori</h2>
-<table border="1" cellpadding="8">
-    <tr><th>Kategori</th><th>Jenis</th><th>Total</th></tr>
+<table class="ledger-table">
+    <thead>
+        <tr><th>Kategori</th><th>Jenis</th><th class="col-amount">Total</th></tr>
+    </thead>
+    <tbody>
     {% for (kategori, jenis), jumlah in rekap.items() %}
     <tr>
         <td>{{ kategori }}</td>
-        <td>{{ jenis }}</td>
-        <td>Rp {{ "{:,.0f}".format(jumlah) }}</td>
+        <td>
+            {% if jenis == 'masuk' %}
+                <span class="tag tag-masuk">Masuk</span>
+            {% else %}
+                <span class="tag tag-keluar">Keluar</span>
+            {% endif %}
+        </td>
+        <td class="col-amount {{ 'amount-masuk' if jenis == 'masuk' else 'amount-keluar' }}">
+            Rp {{ "{:,.0f}".format(jumlah) }}
+        </td>
     </tr>
     {% else %}
     <tr><td colspan="3">Tidak ada data untuk periode ini.</td></tr>
     {% endfor %}
+    </tbody>
 </table>
 {% endblock %}

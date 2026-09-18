@@ -1,22 +1,46 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Dashboard Kas</h1>
-<div class="ringkasan">
-    <p>Total Masuk: Rp {{ "{:,.0f}".format(sum_masuk) }}</p>
-    <p>Total Keluar: Rp {{ "{:,.0f}".format(sum_keluar) }}</p>
-    <p><strong>Saldo: Rp {{ "{:,.0f}".format(saldo) }}</strong></p>
+
+<div class="card-row">
+    <div class="stat-card stat-masuk">
+        <span class="stat-label">Total Masuk</span>
+        <span class="stat-value">Rp {{ "{:,.0f}".format(sum_masuk) }}</span>
+    </div>
+    <div class="stat-card stat-keluar">
+        <span class="stat-label">Total Keluar</span>
+        <span class="stat-value">Rp {{ "{:,.0f}".format(sum_keluar) }}</span>
+    </div>
+    <div class="stat-card stat-saldo">
+        <span class="stat-label">Saldo</span>
+        <span class="stat-value">Rp {{ "{:,.0f}".format(saldo) }}</span>
+    </div>
 </div>
 
 <h2>Transaksi Terakhir</h2>
-<table>
-    <tr><th>Tanggal</th><th>Jenis</th><th>Jumlah</th><th>Keterangan</th></tr>
+<table class="ledger-table">
+    <thead>
+        <tr><th>Tanggal</th><th>Jenis</th><th class="col-amount">Jumlah</th><th>Keterangan</th></tr>
+    </thead>
+    <tbody>
     {% for t in transaksi %}
     <tr>
         <td>{{ t.tanggal }}</td>
-        <td>{{ t.jenis }}</td>
-        <td>Rp {{ "{:,.0f}".format(t.jumlah) }}</td>
-        <td>{{ t.keterangan }}</td>
+        <td>
+            {% if t.jenis == 'masuk' %}
+                <span class="tag tag-masuk">Masuk</span>
+            {% else %}
+                <span class="tag tag-keluar">Keluar</span>
+            {% endif %}
+        </td>
+        <td class="col-amount {{ 'amount-masuk' if t.jenis == 'masuk' else 'amount-keluar' }}">
+            {{ '+' if t.jenis == 'masuk' else '−' }} Rp {{ "{:,.0f}".format(t.jumlah) }}
+        </td>
+        <td>{{ t.keterangan or '-' }}</td>
     </tr>
+    {% else %}
+    <tr><td colspan="4">Belum ada transaksi.</td></tr>
     {% endfor %}
+    </tbody>
 </table>
 {% endblock %}

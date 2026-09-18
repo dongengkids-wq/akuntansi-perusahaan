@@ -3,6 +3,7 @@ from supabase import create_client
 from config import Config
 from datetime import date
 import calendar
+import uuid
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -31,11 +32,28 @@ def list_transaksi():
     data = supabase.table("transaksi").select("*, kategori(nama)").order("tanggal", desc=True).execute().data
     return render_template("transaksi/list.html", transaksi=data)
 
+def upload_bukti(file):
+    """Upload file bukti ke Supabase Storage, return URL publik atau None."""
+    if not file or file.filename == "":
+        return None
+
+    ext = file.filename.rsplit(".", 1)[-1].lower()
+    nama_file = f"{uuid.uuid4()}.{ext}"
+
+    file_bytes = file.read()
+    supabase.storage.from_("bukti-transaksi").upload(
+        nama_file, file_bytes, {"content-type": file.content_type}
+    )
+    url = supabase.storage.from_("bukti-transaksi").get_public_url(nama_file)
+    return url
+
 @app.route("/transaksi/tambah", methods=["GET", "POST"])
 def tambah_transaksi():
     kategori_list = supabase.table("kategori").select("*").execute().data
 
     if request.method == "POST":
+        bukti_url = upload_bukti(request.files.get("bukti"))
+
         supabase.table("transaksi").insert({
             "tanggal": request.form.get("tanggal") or str(date.today()),
             "jenis": request.form["jenis"],
@@ -43,6 +61,7 @@ def tambah_transaksi():
             "jumlah": float(request.form["jumlah"]),
             "keterangan": request.form.get("keterangan"),
             "metode": request.form.get("metode", "cash"),
+            "bukti_url": bukti_url,
         }).execute()
         flash("Transaksi berhasil disimpan.", "success")
         return redirect(url_for("list_transaksi"))
@@ -54,14 +73,19 @@ def edit_transaksi(id):
     kategori_list = supabase.table("kategori").select("*").execute().data
 
     if request.method == "POST":
-        supabase.table("transaksi").update({
+        data_update = {
             "tanggal": request.form["tanggal"],
             "jenis": request.form["jenis"],
             "kategori_id": request.form["kategori_id"],
             "jumlah": float(request.form["jumlah"]),
             "keterangan": request.form.get("keterangan"),
             "metode": request.form.get("metode", "cash"),
-        }).eq("id", id).execute()
+        }
+        bukti_url_baru = upload_bukti(request.files.get("bukti"))
+        if bukti_url_baru:
+            data_update["bukti_url"] = bukti_url_baru
+
+        supabase.table("transaksi").update(data_update).eq("id", id).execute()
         flash("Transaksi berhasil diperbarui.", "success")
         return redirect(url_for("list_transaksi"))
 

@@ -2,28 +2,42 @@
 {% block content %}
 <h1>Kategori</h1>
 
-<form method="POST">
-    <label>Nama Kategori:</label>
-    <input type="text" name="nama" required>
+<div class="form-card">
+    <form method="POST">
+        <div class="field">
+            <label for="nama">Nama Kategori</label>
+            <input type="text" id="nama" name="nama" required>
+        </div>
+        <div class="field">
+            <label for="jenis">Jenis</label>
+            <select id="jenis" name="jenis" required>
+                <option value="masuk">Masuk</option>
+                <option value="keluar">Keluar</option>
+            </select>
+        </div>
+        <button type="submit" class="btn">Tambah Kategori</button>
+    </form>
+</div>
 
-    <label>Jenis:</label>
-    <select name="jenis" required>
-        <option value="masuk">Masuk</option>
-        <option value="keluar">Keluar</option>
-    </select>
-
-    <button type="submit">Tambah</button>
-</form>
-
-<table border="1" cellpadding="8">
-    <tr><th>Nama</th><th>Jenis</th></tr>
+<table class="ledger-table">
+    <thead>
+        <tr><th>Nama</th><th>Jenis</th></tr>
+    </thead>
+    <tbody>
     {% for k in kategori %}
     <tr>
         <td>{{ k.nama }}</td>
-        <td>{{ k.jenis }}</td>
+        <td>
+            {% if k.jenis == 'masuk' %}
+                <span class="tag tag-masuk">Masuk</span>
+            {% else %}
+                <span class="tag tag-keluar">Keluar</span>
+            {% endif %}
+        </td>
     </tr>
     {% else %}
     <tr><td colspan="2">Belum ada kategori. Tambahkan dulu sebelum bisa input transaksi.</td></tr>
     {% endfor %}
+    </tbody>
 </table>
 {% endblock %}

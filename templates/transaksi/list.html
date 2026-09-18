@@ -1,35 +1,57 @@
 {% extends "base.html" %}
 {% block content %}
 <h1>Daftar Transaksi</h1>
-<a href="{{ url_for('tambah_transaksi') }}">+ Tambah Transaksi</a>
+<p style="margin: -8px 0 24px;"><a href="{{ url_for('tambah_transaksi') }}" class="btn">+ Tambah Transaksi</a></p>
 
-<table border="1" cellpadding="8">
-    <tr>
-        <th>Tanggal</th>
-        <th>Jenis</th>
-        <th>Kategori</th>
-        <th>Jumlah</th>
-        <th>Keterangan</th>
-        <th>Metode</th>
-        <th>Aksi</th>
-    </tr>
+<table class="ledger-table">
+    <thead>
+        <tr>
+            <th>Tanggal</th>
+            <th>Jenis</th>
+            <th>Kategori</th>
+            <th class="col-amount">Jumlah</th>
+            <th>Keterangan</th>
+            <th>Metode</th>
+            <th>Bukti</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody>
     {% for t in transaksi %}
     <tr>
         <td>{{ t.tanggal }}</td>
-        <td>{{ t.jenis }}</td>
+        <td>
+            {% if t.jenis == 'masuk' %}
+                <span class="tag tag-masuk">Masuk</span>
+            {% else %}
+                <span class="tag tag-keluar">Keluar</span>
+            {% endif %}
+        </td>
         <td>{{ t.kategori.nama if t.kategori else '-' }}</td>
-        <td>Rp {{ "{:,.0f}".format(t.jumlah) }}</td>
+        <td class="col-amount {{ 'amount-masuk' if t.jenis == 'masuk' else 'amount-keluar' }}">
+            {{ '+' if t.jenis == 'masuk' else '−' }} Rp {{ "{:,.0f}".format(t.jumlah) }}
+        </td>
         <td>{{ t.keterangan or '-' }}</td>
         <td>{{ t.metode }}</td>
         <td>
-            <a href="{{ url_for('edit_transaksi', id=t.id) }}">Edit</a> |
-            <form method="POST" action="{{ url_for('hapus_transaksi', id=t.id) }}" style="display:inline">
-                <button type="submit" onclick="return confirm('Yakin hapus transaksi ini?')">Hapus</button>
-            </form>
+            {% if t.bukti_url %}
+                <a href="{{ t.bukti_url }}" target="_blank">Lihat</a>
+            {% else %}
+                -
+            {% endif %}
+        </td>
+        <td>
+            <div class="actions-row">
+                <a href="{{ url_for('edit_transaksi', id=t.id) }}" class="btn btn-link">Edit</a>
+                <form method="POST" action="{{ url_for('hapus_transaksi', id=t.id) }}">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin hapus transaksi ini?')">Hapus</button>
+                </form>
+            </div>
         </td>
     </tr>
     {% else %}
-    <tr><td colspan="6">Belum ada transaksi.</td></tr>
+    <tr><td colspan="8">Belum ada transaksi.</td></tr>
     {% endfor %}
+    </tbody>
 </table>
 {% endblock %}
