@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Laporan Bulanan</h1>
+
+<form method="GET">
+    <label>Pilih Bulan:</label>
+    <input type="month" name="bulan" value="{{ bulan or '' }}">
+    <button type="submit">Tampilkan</button>
+</form>
+
+<h3>Total Masuk: Rp {{ "{:,.0f}".format(total_masuk) }}</h3>
+<h3>Total Keluar: Rp {{ "{:,.0f}".format(total_keluar) }}</h3>
+<h3>Saldo: Rp {{ "{:,.0f}".format(total_masuk - total_keluar) }}</h3>
+
+<h2>Rekap per Kategori</h2>
+<table border="1" cellpadding="8">
+    <tr><th>Kategori</th><th>Jenis</th><th>Total</th></tr>
+    {% for (kategori, jenis), jumlah in rekap.items() %}
+    <tr>
+        <td>{{ kategori }}</td>
+        <td>{{ jenis }}</td>
+        <td>Rp {{ "{:,.0f}".format(jumlah) }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3">Tidak ada data untuk periode ini.</td></tr>
+    {% endfor %}
+</table>
+{% endblock %}

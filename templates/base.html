@@ -10,6 +10,7 @@
         <a href="{{ url_for('dashboard') }}">Dashboard</a>
         <a href="{{ url_for('list_transaksi') }}">Transaksi</a>
         <a href="{{ url_for('kategori') }}">Kategori</a>
+        <a href="{{ url_for('laporan') }}">Laporan</a>
     </nav>
     <main>
         {% with messages = get_flashed_messages(with_categories=true) %}

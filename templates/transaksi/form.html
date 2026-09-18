@@ -4,7 +4,7 @@
 
 <form method="POST">
     <label>Tanggal:</label><br>
-    <input type="date" name="tanggal"><br><br>
+    <input type="date" name="tanggal" value="{{ transaksi.tanggal if transaksi else '' }}"><br><br>
 
     <label>Jenis:</label><br>
     <select name="jenis" required>
@@ -20,7 +20,7 @@
     </select><br><br>
 
     <label>Jumlah:</label><br>
-    <input type="number" name="jumlah" step="0.01" required><br><br>
+    <input type="number" name="jumlah" step="0.01" required value="{{ transaksi.jumlah if transaksi else '' }}"><br><br>
 
     <label>Keterangan:</label><br>
     <textarea name="keterangan"></textarea><br><br>
