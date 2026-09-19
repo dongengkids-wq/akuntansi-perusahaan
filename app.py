@@ -767,5 +767,81 @@ def export_pdf():
     nama_file = f"laporan-{bulan or 'semua'}.pdf"
     return send_file(output, download_name=nama_file, as_attachment=True, mimetype="application/pdf")
 
+@app.route("/transaksi/nota/<int:id>")
+@login_required
+def cetak_nota(id):
+    t = supabase.table("transaksi").select("*, kategori(nama)").eq("id", id).single().execute().data
+    if not t:
+        flash("Transaksi tidak ditemukan.", "error")
+        return redirect(url_for("list_transaksi"))
+
+    output = BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=A4, topMargin=25 * mm, bottomMargin=25 * mm,
+                             leftMargin=25 * mm, rightMargin=25 * mm)
+    styles = getSampleStyleSheet()
+
+    title_style = ParagraphStyle("title", parent=styles["Heading1"],
+                                  textColor=colors.HexColor("#1D2B22"), fontSize=20, spaceAfter=4)
+    subtitle_style = ParagraphStyle("subtitle", parent=styles["Normal"],
+                                     textColor=colors.HexColor("#55654A"), fontSize=10)
+    label_style = ParagraphStyle("label", parent=styles["Normal"],
+                                  textColor=colors.HexColor("#55654A"), fontSize=9)
+    value_style = ParagraphStyle("value", parent=styles["Normal"],
+                                  textColor=colors.HexColor("#1D2B22"), fontSize=11)
+
+    elements = []
+
+    jenis_label = "PEMASUKAN" if t["jenis"] == "masuk" else "PENGELUARAN"
+    warna_jenis = colors.HexColor("#2F6F4E") if t["jenis"] == "masuk" else colors.HexColor("#9C3B2A")
+
+    elements.append(Paragraph("Buku Kas", title_style))
+    elements.append(Paragraph(f"Nota {jenis_label.title()}", subtitle_style))
+    elements.append(Spacer(1, 20))
+
+    nama_kat = t["kategori"]["nama"] if t.get("kategori") else "-"
+
+    detail_data = [
+        [Paragraph("No. Transaksi", label_style), Paragraph(f"#{t['id']}", value_style)],
+        [Paragraph("Tanggal", label_style), Paragraph(t["tanggal"], value_style)],
+        [Paragraph("Jenis", label_style), Paragraph(jenis_label, ParagraphStyle("jenis", parent=value_style, textColor=warna_jenis))],
+        [Paragraph("Kategori", label_style), Paragraph(nama_kat, value_style)],
+        [Paragraph("Metode", label_style), Paragraph((t.get("metode") or "-").title(), value_style)],
+        [Paragraph("Keterangan", label_style), Paragraph(t.get("keterangan") or "-", value_style)],
+    ]
+
+    detail_table = Table(detail_data, colWidths=[110, 330])
+    detail_table.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 10),
+        ("LINEBELOW", (0, 0), (-1, -2), 0.5, colors.HexColor("#B7C4AC")),
+    ]))
+    elements.append(detail_table)
+    elements.append(Spacer(1, 24))
+
+    jumlah_fmt = f"Rp {t['jumlah']:,.0f}"
+    jumlah_table = Table([[Paragraph("JUMLAH", label_style)],
+                          [Paragraph(jumlah_fmt, ParagraphStyle("jumlah", parent=title_style, fontSize=24, textColor=warna_jenis))]],
+                          colWidths=[440])
+    jumlah_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#F5F8F0")),
+        ("BOX", (0, 0), (-1, -1), 1, colors.HexColor("#B7C4AC")),
+        ("TOPPADDING", (0, 0), (-1, -1), 14),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 14),
+        ("LEFTPADDING", (0, 0), (-1, -1), 16),
+    ]))
+    elements.append(jumlah_table)
+    elements.append(Spacer(1, 30))
+
+    footer_style = ParagraphStyle("footer", parent=styles["Normal"], fontSize=8,
+                                   textColor=colors.HexColor("#55654A"))
+    dicetak_pada = datetime.now().strftime("%d/%m/%Y %H:%M")
+    elements.append(Paragraph(f"Dicetak oleh {current_user.nama or current_user.username} pada {dicetak_pada}", footer_style))
+
+    doc.build(elements)
+    output.seek(0)
+
+    nama_file = f"nota-transaksi-{t['id']}.pdf"
+    return send_file(output, download_name=nama_file, as_attachment=False, mimetype="application/pdf")
+
 if __name__ == "__main__":
     app.run(debug=True)
