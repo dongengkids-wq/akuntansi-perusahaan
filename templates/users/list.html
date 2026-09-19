@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Kelola User</h1>
+
+<div class="form-card">
+    <form method="POST">
+        <div class="field">
+            <label for="username">Username</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div class="field">
+            <label for="nama">Nama Lengkap</label>
+            <input type="text" id="nama" name="nama">
+        </div>
+        <div class="field">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required minlength="6">
+        </div>
+        <button type="submit" class="btn">Tambah User</button>
+    </form>
+</div>
+
+<table class="ledger-table">
+    <thead>
+        <tr><th>Username</th><th>Nama</th><th>Aksi</th></tr>
+    </thead>
+    <tbody>
+    {% for u in users %}
+    <tr>
+        <td>{{ u.username }}</td>
+        <td>{{ u.nama or '-' }}</td>
+        <td>
+            {% if u.id != current_user.id %}
+            <form method="POST" action="{{ url_for('hapus_user', id=u.id) }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin hapus user ini?')">Hapus</button>
+            </form>
+            {% else %}
+            <span class="field-hint">Akun kamu</span>
+            {% endif %}
+        </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="3">Belum ada user lain.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

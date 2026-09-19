@@ -18,6 +18,7 @@
                 <a href="{{ url_for('list_transaksi') }}" class="{{ 'active' if request.path.startswith('/transaksi') else '' }}">Transaksi</a>
                 <a href="{{ url_for('kategori') }}" class="{{ 'active' if request.path == url_for('kategori') else '' }}">Kategori</a>
                 <a href="{{ url_for('laporan') }}" class="{{ 'active' if request.path == url_for('laporan') else '' }}">Laporan</a>
+                <a href="{{ url_for('users') }}" class="{{ 'active' if request.path == url_for('users') else '' }}">Users</a>
             </nav>
             <div class="sidebar-footer">
                 <span class="sidebar-user">{{ current_user.nama or current_user.username }}</span>

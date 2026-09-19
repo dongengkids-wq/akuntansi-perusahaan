@@ -13,7 +13,7 @@ from datetime import date
 import calendar
 import uuid
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from werkzeug.security import check_password_hash
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -248,6 +248,46 @@ def hapus_kategori(id):
     flash("Kategori berhasil dihapus.", "success")
     return redirect(url_for("kategori"))
 
+@app.route("/users", methods=["GET", "POST"])
+@login_required
+def users():
+    if request.method == "POST":
+        username = request.form["username"].strip()
+        nama = request.form.get("nama", "").strip()
+        password = request.form["password"]
+
+        existing = supabase.table("users").select("id").eq("username", username).execute().data
+        if existing:
+            flash("Username sudah dipakai, pilih username lain.", "error")
+            return redirect(url_for("users"))
+
+        supabase.table("users").insert({
+            "username": username,
+            "nama": nama,
+            "password_hash": generate_password_hash(password),
+        }).execute()
+        flash(f"User '{username}' berhasil ditambahkan.", "success")
+        return redirect(url_for("users"))
+
+    data = supabase.table("users").select("id, username, nama, created_at").order("id").execute().data
+    return render_template("users/list.html", users=data)
+
+
+@app.route("/users/hapus/<int:id>", methods=["POST"])
+@login_required
+def hapus_user(id):
+    if str(id) == str(current_user.id):
+        flash("Tidak bisa menghapus akun yang sedang login.", "error")
+        return redirect(url_for("users"))
+
+    total_user = supabase.table("users").select("id").execute().data
+    if len(total_user) <= 1:
+        flash("Tidak bisa menghapus, minimal harus ada 1 user.", "error")
+        return redirect(url_for("users"))
+
+    supabase.table("users").delete().eq("id", id).execute()
+    flash("User berhasil dihapus.", "success")
+    return redirect(url_for("users"))
 
 @app.route("/laporan")
 @login_required
