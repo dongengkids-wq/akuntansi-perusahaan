@@ -1,4 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for, flash
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from io import BytesIO
+import openpyxl
+from openpyxl.styles import Font, PatternFill, Alignment
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from supabase import create_client
 from config import Config
 from datetime import date
@@ -266,7 +274,151 @@ def laporan():
                            total_masuk=total_masuk,
                            total_keluar=total_keluar,
                            bulan=bulan)
+def get_data_laporan(bulan):
+    query = supabase.table("transaksi").select("*, kategori(nama)")
+    if bulan:
+        tahun, bln = map(int, bulan.split("-"))
+        hari_terakhir = calendar.monthrange(tahun, bln)[1]
+        query = query.gte("tanggal", f"{bulan}-01").lte("tanggal", f"{bulan}-{hari_terakhir:02d}")
+    return query.order("tanggal").execute().data
 
+
+@app.route("/laporan/export/excel")
+@login_required
+def export_excel():
+    bulan = request.args.get("bulan")
+    transaksi = get_data_laporan(bulan)
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Laporan Transaksi"
+
+    headers = ["Tanggal", "Jenis", "Kategori", "Jumlah", "Keterangan", "Metode"]
+    ws.append(headers)
+
+    header_fill = PatternFill(start_color="1F3A5F", end_color="1F3A5F", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True)
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center")
+
+    total_masuk = 0
+    total_keluar = 0
+
+    for t in transaksi:
+        nama_kat = t["kategori"]["nama"] if t.get("kategori") else "-"
+        ws.append([
+            t["tanggal"],
+            "Masuk" if t["jenis"] == "masuk" else "Keluar",
+            nama_kat,
+            t["jumlah"],
+            t.get("keterangan") or "-",
+            t.get("metode") or "-",
+        ])
+        r = ws.max_row
+        amount_cell = ws.cell(row=r, column=4)
+        amount_cell.number_format = "#,##0"
+        if t["jenis"] == "masuk":
+            amount_cell.font = Font(color="2F6F4E")
+            total_masuk += t["jumlah"]
+        else:
+            amount_cell.font = Font(color="9C3B2A")
+            total_keluar += t["jumlah"]
+
+    ws.append([])
+    total_row = ws.max_row + 1
+    ws.cell(row=total_row, column=3, value="Total Masuk").font = Font(bold=True)
+    ws.cell(row=total_row, column=4, value=total_masuk).font = Font(bold=True, color="2F6F4E")
+    ws.cell(row=total_row, column=4).number_format = "#,##0"
+
+    ws.cell(row=total_row + 1, column=3, value="Total Keluar").font = Font(bold=True)
+    ws.cell(row=total_row + 1, column=4, value=total_keluar).font = Font(bold=True, color="9C3B2A")
+    ws.cell(row=total_row + 1, column=4).number_format = "#,##0"
+
+    ws.cell(row=total_row + 2, column=3, value="Saldo").font = Font(bold=True)
+    ws.cell(row=total_row + 2, column=4, value=total_masuk - total_keluar).font = Font(bold=True)
+    ws.cell(row=total_row + 2, column=4).number_format = "#,##0"
+
+    col_widths = [14, 10, 20, 15, 30, 12]
+    for i, w in enumerate(col_widths, 1):
+        ws.column_dimensions[openpyxl.utils.get_column_letter(i)].width = w
+
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    nama_file = f"laporan-{bulan or 'semua'}.xlsx"
+    return send_file(output, download_name=nama_file, as_attachment=True,
+                      mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
+@app.route("/laporan/export/pdf")
+@login_required
+def export_pdf():
+    bulan = request.args.get("bulan")
+    transaksi = get_data_laporan(bulan)
+
+    total_masuk = sum(t["jumlah"] for t in transaksi if t["jenis"] == "masuk")
+    total_keluar = sum(t["jumlah"] for t in transaksi if t["jenis"] == "keluar")
+
+    output = BytesIO()
+    doc = SimpleDocTemplate(output, pagesize=A4, topMargin=20 * mm, bottomMargin=20 * mm)
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle("title", parent=styles["Heading1"], textColor=colors.HexColor("#1D2B22"))
+
+    elements = []
+    judul = f"Laporan Transaksi - {bulan}" if bulan else "Laporan Transaksi - Semua Periode"
+    elements.append(Paragraph(judul, title_style))
+    elements.append(Spacer(1, 12))
+
+    data = [["Tanggal", "Jenis", "Kategori", "Jumlah", "Keterangan"]]
+    for t in transaksi:
+        nama_kat = t["kategori"]["nama"] if t.get("kategori") else "-"
+        jumlah_fmt = f"Rp {t['jumlah']:,.0f}"
+        data.append([
+            t["tanggal"],
+            "Masuk" if t["jenis"] == "masuk" else "Keluar",
+            nama_kat,
+            jumlah_fmt,
+            t.get("keterangan") or "-",
+        ])
+
+    table = Table(data, colWidths=[70, 50, 90, 80, 140])
+    table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F3A5F")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 8.5),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#B7C4AC")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F8F0")]),
+    ]))
+    elements.append(table)
+    elements.append(Spacer(1, 16))
+
+    ringkasan_data = [
+        ["Total Masuk", f"Rp {total_masuk:,.0f}"],
+        ["Total Keluar", f"Rp {total_keluar:,.0f}"],
+        ["Saldo", f"Rp {total_masuk - total_keluar:,.0f}"],
+    ]
+    ringkasan_table = Table(ringkasan_data, colWidths=[100, 100])
+    ringkasan_table.setStyle(TableStyle([
+        ("FONTNAME", (0, 0), (-1, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 10),
+        ("TEXTCOLOR", (0, 0), (0, 0), colors.HexColor("#2F6F4E")),
+        ("TEXTCOLOR", (1, 0), (1, 0), colors.HexColor("#2F6F4E")),
+        ("TEXTCOLOR", (0, 1), (0, 1), colors.HexColor("#9C3B2A")),
+        ("TEXTCOLOR", (1, 1), (1, 1), colors.HexColor("#9C3B2A")),
+    ]))
+    elements.append(ringkasan_table)
+
+    doc.build(elements)
+    output.seek(0)
+
+    nama_file = f"laporan-{bulan or 'semua'}.pdf"
+    return send_file(output, download_name=nama_file, as_attachment=True, mimetype="application/pdf")
 
 if __name__ == "__main__":
     app.run(debug=True)

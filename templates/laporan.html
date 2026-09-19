@@ -2,12 +2,14 @@
 {% block content %}
 <h1>Laporan Bulanan</h1>
 
-<form method="GET" class="actions-row" style="margin-bottom: 28px;">
+<form method="GET" class="actions-row" style="margin-bottom: 28px; flex-wrap: wrap;">
     <div class="field" style="margin-bottom: 0;">
         <label for="bulan">Pilih Bulan</label>
         <input type="month" id="bulan" name="bulan" value="{{ bulan or '' }}">
     </div>
     <button type="submit" class="btn" style="margin-top: 20px;">Tampilkan</button>
+    <a href="{{ url_for('export_excel', bulan=bulan) }}" class="btn btn-link" style="margin-top: 20px;">Export Excel</a>
+    <a href="{{ url_for('export_pdf', bulan=bulan) }}" class="btn btn-link" style="margin-top: 20px;">Export PDF</a>
 </form>
 
 <div class="card-row">
