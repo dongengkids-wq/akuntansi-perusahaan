@@ -16,9 +16,13 @@
             <nav class="side-nav">
                 <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.path == url_for('dashboard') else '' }}">Dashboard</a>
                 <a href="{{ url_for('list_transaksi') }}" class="{{ 'active' if request.path.startswith('/transaksi') else '' }}">Transaksi</a>
+                {% if current_user.role == 'admin' %}
                 <a href="{{ url_for('kategori') }}" class="{{ 'active' if request.path == url_for('kategori') else '' }}">Kategori</a>
+                {% endif %}
                 <a href="{{ url_for('laporan') }}" class="{{ 'active' if request.path == url_for('laporan') else '' }}">Laporan</a>
+                {% if current_user.role == 'admin' %}
                 <a href="{{ url_for('users') }}" class="{{ 'active' if request.path == url_for('users') else '' }}">Users</a>
+                {% endif %}
             </nav>
             <div class="sidebar-footer">
                 <span class="sidebar-user">{{ current_user.nama or current_user.username }}</span>

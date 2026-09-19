@@ -16,19 +16,33 @@
             <label for="password">Password</label>
             <input type="password" id="password" name="password" required minlength="6">
         </div>
+        <div class="field">
+            <label for="role">Role</label>
+            <select id="role" name="role">
+                <option value="staff">Staff</option>
+                <option value="admin">Admin</option>
+            </select>
+        </div>
         <button type="submit" class="btn">Tambah User</button>
     </form>
 </div>
 
 <table class="ledger-table">
     <thead>
-        <tr><th>Username</th><th>Nama</th><th>Aksi</th></tr>
+        <tr><th>Username</th><th>Nama</th><th>Role</th><th>Aksi</th></tr>
     </thead>
     <tbody>
     {% for u in users %}
     <tr>
         <td>{{ u.username }}</td>
         <td>{{ u.nama or '-' }}</td>
+        <td>
+            {% if u.role == 'admin' %}
+                <span class="tag tag-masuk">Admin</span>
+            {% else %}
+                <span class="tag tag-keluar">Staff</span>
+            {% endif %}
+        </td>
         <td>
             {% if u.id != current_user.id %}
             <form method="POST" action="{{ url_for('hapus_user', id=u.id) }}">

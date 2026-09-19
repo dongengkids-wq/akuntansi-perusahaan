@@ -25,19 +25,32 @@ login_manager.init_app(app)
 login_manager.login_view = "login"
 
 
+from functools import wraps
+
 class User(UserMixin):
-    def __init__(self, id, username, nama):
+    def __init__(self, id, username, nama, role):
         self.id = id
         self.username = username
         self.nama = nama
+        self.role = role
 
 
 @login_manager.user_loader
 def load_user(user_id):
     data = supabase.table("users").select("*").eq("id", user_id).single().execute().data
     if data:
-        return User(data["id"], data["username"], data.get("nama"))
+        return User(data["id"], data["username"], data.get("nama"), data.get("role", "staff"))
     return None
+
+
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if current_user.role != "admin":
+            flash("Halaman ini khusus untuk admin.", "error")
+            return redirect(url_for("dashboard"))
+        return f(*args, **kwargs)
+    return decorated
 
 
 @app.route("/login", methods=["GET", "POST"])
@@ -50,7 +63,7 @@ def login():
         password = request.form["password"]
         data = supabase.table("users").select("*").eq("username", username).execute().data
         if data and check_password_hash(data[0]["password_hash"], password):
-            user = User(data[0]["id"], data[0]["username"], data[0].get("nama"))
+            user = User(data[0]["id"], data[0]["username"], data[0].get("nama"), data[0].get("role", "staff"))
             login_user(user)
             flash("Berhasil login.", "success")
             next_page = request.args.get("next")
@@ -199,6 +212,7 @@ def tambah_transaksi():
 
 @app.route("/transaksi/edit/<int:id>", methods=["GET", "POST"])
 @login_required
+@admin_required
 def edit_transaksi(id):
     kategori_list = supabase.table("kategori").select("*").execute().data
 
@@ -240,6 +254,7 @@ def hapus_bukti_storage(bukti_url):
 
 @app.route("/transaksi/hapus/<int:id>", methods=["POST"])
 @login_required
+@admin_required
 def hapus_transaksi(id):
     data = supabase.table("transaksi").select("bukti_url").eq("id", id).single().execute().data
     if data:
@@ -252,6 +267,7 @@ def hapus_transaksi(id):
 
 @app.route("/kategori", methods=["GET", "POST"])
 @login_required
+@admin_required
 def kategori():
     if request.method == "POST":
         supabase.table("kategori").insert({
@@ -266,6 +282,7 @@ def kategori():
 
 @app.route("/kategori/hapus/<int:id>", methods=["POST"])
 @login_required
+@admin_required
 def hapus_kategori(id):
     dipakai = supabase.table("transaksi").select("id").eq("kategori_id", id).limit(1).execute().data
     if dipakai:
@@ -278,6 +295,7 @@ def hapus_kategori(id):
 
 @app.route("/users", methods=["GET", "POST"])
 @login_required
+@admin_required
 def users():
     if request.method == "POST":
         username = request.form["username"].strip()
@@ -289,20 +307,23 @@ def users():
             flash("Username sudah dipakai, pilih username lain.", "error")
             return redirect(url_for("users"))
 
+        role = request.form.get("role", "staff")
         supabase.table("users").insert({
             "username": username,
             "nama": nama,
             "password_hash": generate_password_hash(password),
+            "role": role,
         }).execute()
         flash(f"User '{username}' berhasil ditambahkan.", "success")
         return redirect(url_for("users"))
 
-    data = supabase.table("users").select("id, username, nama, created_at").order("id").execute().data
+    data = supabase.table("users").select("id, username, nama, role, created_at").order("id").execute().data
     return render_template("users/list.html", users=data)
 
 
 @app.route("/users/hapus/<int:id>", methods=["POST"])
 @login_required
+@admin_required
 def hapus_user(id):
     if str(id) == str(current_user.id):
         flash("Tidak bisa menghapus akun yang sedang login.", "error")

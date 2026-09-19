@@ -17,6 +17,7 @@ supabase.table("users").insert({
     "username": username,
     "nama": nama,
     "password_hash": generate_password_hash(password),
+    "role": "admin",
 }).execute()
 
 print(f"User '{username}' berhasil dibuat.")

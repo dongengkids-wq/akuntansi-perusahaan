@@ -82,12 +82,16 @@
             {% endif %}
         </td>
         <td>
+            {% if current_user.role == 'admin' %}
             <div class="actions-row">
                 <a href="{{ url_for('edit_transaksi', id=t.id) }}" class="btn btn-link">Edit</a>
                 <form method="POST" action="{{ url_for('hapus_transaksi', id=t.id) }}">
                     <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin hapus transaksi ini?')">Hapus</button>
                 </form>
             </div>
+            {% else %}
+            <span class="field-hint">-</span>
+            {% endif %}
         </td>
     </tr>
     {% else %}
