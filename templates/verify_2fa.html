@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifikasi 2FA - Buku Kas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body { display: flex; align-items: center; justify-content: center; background-image: none; }
+        .login-box { width: 100%; max-width: 380px; }
+        .login-brand { font-family: 'Source Serif 4', serif; font-size: 26px; font-weight: 600; text-align: center; margin-bottom: 28px; color: var(--ink); }
+    </style>
+</head>
+<body>
+    <div class="login-box">
+        <div class="login-brand">Verifikasi 2FA</div>
+        <div class="form-card" style="max-width: none;">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, msg in messages %}
+                    <div class="flash flash-{{ category }}">{{ msg }}</div>
+                {% endfor %}
+            {% endwith %}
+            <form method="POST">
+                <div class="field">
+                    <label for="kode">Kode dari aplikasi authenticator</label>
+                    <input type="text" id="kode" name="kode" inputmode="numeric" autocomplete="one-time-code" required autofocus>
+                    <div class="field-hint">Atau masukkan salah satu kode cadangan kamu.</div>
+                </div>
+                <button type="submit" class="btn" style="width: 100%;">Verifikasi</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>

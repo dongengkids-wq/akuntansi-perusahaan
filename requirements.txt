@@ -10,6 +10,8 @@ gotrue==2.12.4
 gunicorn==22.0.0
 openpyxl==3.1.5
 reportlab==4.2.5
+pyotp==2.9.0
+qrcode[pil]==7.4.2
 h11==0.16.0
 h2==4.4.1
 hpack==4.2.0

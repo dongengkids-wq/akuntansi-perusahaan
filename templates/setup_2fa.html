@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Aktifkan 2FA</h1>
+
+<div class="form-card">
+    <p>1. Scan QR code ini pakai aplikasi authenticator (Google Authenticator, Authy, dll):</p>
+    <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR Code 2FA" style="display: block; margin: 16px 0; max-width: 220px;">
+    <p class="field-hint">Atau masukkan manual kode ini: <strong>{{ secret }}</strong></p>
+
+    <p style="margin-top: 20px;">2. Masukkan kode 6 digit dari aplikasi untuk konfirmasi:</p>
+    <form method="POST">
+        <div class="field">
+            <label for="kode">Kode Verifikasi</label>
+            <input type="text" id="kode" name="kode" inputmode="numeric" required autofocus>
+        </div>
+        <button type="submit" class="btn">Aktifkan</button>
+    </form>
+</div>
+{% endblock %}

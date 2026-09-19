@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>2FA Berhasil Diaktifkan</h1>
+
+<div class="form-card">
+    <p><strong>Simpan kode cadangan ini di tempat aman.</strong> Setiap kode hanya bisa dipakai sekali, untuk login kalau kamu kehilangan akses ke aplikasi authenticator.</p>
+    <table class="ledger-table" style="margin: 16px 0;">
+        <tbody>
+        {% for code in codes %}
+            <tr><td style="font-family: 'IBM Plex Mono', monospace;">{{ code }}</td></tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <a href="{{ url_for('keamanan') }}" class="btn">Selesai</a>
+</div>
+{% endblock %}

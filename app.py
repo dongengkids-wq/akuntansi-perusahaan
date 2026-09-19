@@ -1,5 +1,9 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, session
 from io import BytesIO
+import base64
+import secrets
+import pyotp
+import qrcode
 import openpyxl
 from openpyxl.styles import Font, PatternFill, Alignment
 from reportlab.lib import colors
@@ -9,7 +13,7 @@ from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, 
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from supabase import create_client
 from config import Config
-from datetime import date
+from datetime import date, datetime, timezone, timedelta
 import calendar
 import uuid
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
@@ -19,6 +23,15 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 supabase = create_client(app.config["SUPABASE_URL"], app.config["SUPABASE_KEY"])
+
+
+@app.after_request
+def set_security_headers(response):
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    return response
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -53,6 +66,10 @@ def admin_required(f):
     return decorated
 
 
+LOCKOUT_THRESHOLD = 5
+LOCKOUT_DURATION_MENIT = 15
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if current_user.is_authenticated:
@@ -62,15 +79,79 @@ def login():
         username = request.form["username"]
         password = request.form["password"]
         data = supabase.table("users").select("*").eq("username", username).execute().data
-        if data and check_password_hash(data[0]["password_hash"], password):
-            user = User(data[0]["id"], data[0]["username"], data[0].get("nama"), data[0].get("role", "staff"))
+
+        if not data:
+            flash("Username atau password salah.", "error")
+            return render_template("login.html")
+
+        user_data = data[0]
+
+        locked_until = user_data.get("locked_until")
+        if locked_until:
+            locked_until_dt = datetime.fromisoformat(locked_until.replace("Z", "+00:00"))
+            if locked_until_dt > datetime.now(timezone.utc):
+                sisa = int((locked_until_dt - datetime.now(timezone.utc)).total_seconds() / 60) + 1
+                flash(f"Akun terkunci karena terlalu banyak percobaan gagal. Coba lagi dalam {sisa} menit.", "error")
+                return render_template("login.html")
+
+        if check_password_hash(user_data["password_hash"], password):
+            supabase.table("users").update({"failed_attempts": 0, "locked_until": None}).eq("id", user_data["id"]).execute()
+
+            if user_data.get("totp_enabled"):
+                session["pending_2fa_user_id"] = user_data["id"]
+                return redirect(url_for("verify_2fa"))
+
+            user = User(user_data["id"], user_data["username"], user_data.get("nama"), user_data.get("role", "staff"))
             login_user(user)
             flash("Berhasil login.", "success")
             next_page = request.args.get("next")
             return redirect(next_page or url_for("dashboard"))
-        flash("Username atau password salah.", "error")
+        else:
+            attempts = (user_data.get("failed_attempts") or 0) + 1
+            update_data = {"failed_attempts": attempts}
+            if attempts >= LOCKOUT_THRESHOLD:
+                update_data["locked_until"] = (datetime.now(timezone.utc) + timedelta(minutes=LOCKOUT_DURATION_MENIT)).isoformat()
+                flash(f"Terlalu banyak percobaan gagal. Akun terkunci selama {LOCKOUT_DURATION_MENIT} menit.", "error")
+            else:
+                sisa_percobaan = LOCKOUT_THRESHOLD - attempts
+                flash(f"Username atau password salah. Sisa percobaan: {sisa_percobaan}.", "error")
+            supabase.table("users").update(update_data).eq("id", user_data["id"]).execute()
 
     return render_template("login.html")
+
+
+@app.route("/verify-2fa", methods=["GET", "POST"])
+def verify_2fa():
+    user_id = session.get("pending_2fa_user_id")
+    if not user_id:
+        return redirect(url_for("login"))
+
+    if request.method == "POST":
+        kode = request.form.get("kode", "").strip()
+        user_data = supabase.table("users").select("*").eq("id", user_id).single().execute().data
+
+        totp = pyotp.TOTP(user_data["totp_secret"])
+        if totp.verify(kode, valid_window=1):
+            session.pop("pending_2fa_user_id", None)
+            user = User(user_data["id"], user_data["username"], user_data.get("nama"), user_data.get("role", "staff"))
+            login_user(user)
+            flash("Berhasil login.", "success")
+            return redirect(url_for("dashboard"))
+
+        backup_codes = user_data.get("backup_codes") or []
+        for i, hashed in enumerate(backup_codes):
+            if check_password_hash(hashed, kode):
+                backup_codes.pop(i)
+                supabase.table("users").update({"backup_codes": backup_codes}).eq("id", user_id).execute()
+                session.pop("pending_2fa_user_id", None)
+                user = User(user_data["id"], user_data["username"], user_data.get("nama"), user_data.get("role", "staff"))
+                login_user(user)
+                flash("Berhasil login menggunakan kode cadangan.", "success")
+                return redirect(url_for("dashboard"))
+
+        flash("Kode tidak valid.", "error")
+
+    return render_template("verify_2fa.html")
 
 
 @app.route("/logout")
@@ -79,6 +160,63 @@ def logout():
     logout_user()
     flash("Berhasil logout.", "success")
     return redirect(url_for("login"))
+
+
+@app.route("/keamanan")
+@login_required
+def keamanan():
+    user_data = supabase.table("users").select("totp_enabled").eq("id", current_user.id).single().execute().data
+    return render_template("keamanan.html", totp_enabled=user_data.get("totp_enabled", False))
+
+
+@app.route("/keamanan/2fa/setup", methods=["GET", "POST"])
+@login_required
+def setup_2fa():
+    if request.method == "POST":
+        kode = request.form.get("kode", "").strip()
+        secret = session.get("pending_totp_secret")
+        if not secret:
+            flash("Sesi setup kadaluarsa, coba lagi.", "error")
+            return redirect(url_for("setup_2fa"))
+
+        totp = pyotp.TOTP(secret)
+        if totp.verify(kode, valid_window=1):
+            backup_codes_plain = [secrets.token_hex(4) for _ in range(8)]
+            backup_codes_hashed = [generate_password_hash(c) for c in backup_codes_plain]
+
+            supabase.table("users").update({
+                "totp_secret": secret,
+                "totp_enabled": True,
+                "backup_codes": backup_codes_hashed,
+            }).eq("id", current_user.id).execute()
+
+            session.pop("pending_totp_secret", None)
+            return render_template("backup_codes.html", codes=backup_codes_plain)
+        else:
+            flash("Kode salah, coba lagi.", "error")
+
+    secret = pyotp.random_base32()
+    session["pending_totp_secret"] = secret
+    uri = pyotp.totp.TOTP(secret).provisioning_uri(name=current_user.username, issuer_name="Buku Kas")
+
+    qr = qrcode.make(uri)
+    buf = BytesIO()
+    qr.save(buf, format="PNG")
+    qr_base64 = base64.b64encode(buf.getvalue()).decode()
+
+    return render_template("setup_2fa.html", qr_base64=qr_base64, secret=secret)
+
+
+@app.route("/keamanan/2fa/nonaktifkan", methods=["POST"])
+@login_required
+def nonaktifkan_2fa():
+    supabase.table("users").update({
+        "totp_enabled": False,
+        "totp_secret": None,
+        "backup_codes": None,
+    }).eq("id", current_user.id).execute()
+    flash("2FA berhasil dinonaktifkan.", "success")
+    return redirect(url_for("keamanan"))
 
 
 def get_bulan_terakhir(n=6):

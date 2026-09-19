@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Keamanan Akun</h1>
+
+<div class="stat-card" style="max-width: 480px;">
+    <span class="stat-label">Autentikasi Dua Faktor (2FA)</span>
+    {% if totp_enabled %}
+        <p style="margin: 12px 0;">Status: <span class="tag tag-masuk">Aktif</span></p>
+        <form method="POST" action="{{ url_for('nonaktifkan_2fa') }}">
+            <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin nonaktifkan 2FA? Ini akan mengurangi keamanan akun kamu.')">Nonaktifkan 2FA</button>
+        </form>
+    {% else %}
+        <p style="margin: 12px 0;">Status: <span class="tag tag-keluar">Belum Aktif</span></p>
+        <a href="{{ url_for('setup_2fa') }}" class="btn">Aktifkan 2FA</a>
+    {% endif %}
+</div>
+{% endblock %}

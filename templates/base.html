@@ -26,6 +26,7 @@
             </nav>
             <div class="sidebar-footer">
                 <span class="sidebar-user">{{ current_user.nama or current_user.username }}</span>
+                <a href="{{ url_for('keamanan') }}">Keamanan</a>
                 <a href="{{ url_for('logout') }}">Keluar</a>
             </div>
         </aside>
