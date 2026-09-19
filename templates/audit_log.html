@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Audit Log</h1>
+<p class="field-hint" style="margin-bottom: 20px;">Menampilkan 100 aktivitas terakhir.</p>
+
+<table class="ledger-table">
+    <thead>
+        <tr>
+            <th>Waktu</th>
+            <th>User</th>
+            <th>Aksi</th>
+            <th>Entitas</th>
+            <th>Detail</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for log in logs %}
+    <tr>
+        <td>{{ log.created_at[:16].replace('T', ' ') }}</td>
+        <td>{{ log.username }}</td>
+        <td>
+            {% if log.aksi == 'tambah' %}
+                <span class="tag tag-masuk">Tambah</span>
+            {% elif log.aksi == 'hapus' %}
+                <span class="tag tag-keluar">Hapus</span>
+            {% else %}
+                <span class="tag">Edit</span>
+            {% endif %}
+        </td>
+        <td>{{ log.entitas }}</td>
+        <td>{{ log.detail or '-' }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="5">Belum ada aktivitas tercatat.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

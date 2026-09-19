@@ -32,6 +32,20 @@ def get_saldo_awal():
     return 0
 
 
+def catat_log(aksi, entitas, entitas_id=None, detail=None):
+    try:
+        supabase.table("audit_log").insert({
+            "user_id": current_user.id,
+            "username": current_user.username,
+            "aksi": aksi,
+            "entitas": entitas,
+            "entitas_id": str(entitas_id) if entitas_id else None,
+            "detail": detail,
+        }).execute()
+    except Exception as e:
+        print(f"Gagal catat audit log: {e}")
+
+
 @app.after_request
 def set_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -354,15 +368,18 @@ def tambah_transaksi():
     if request.method == "POST":
         bukti_url = upload_bukti(request.files.get("bukti"))
 
-        supabase.table("transaksi").insert({
+        jumlah = float(request.form["jumlah"])
+        hasil = supabase.table("transaksi").insert({
             "tanggal": request.form.get("tanggal") or str(date.today()),
             "jenis": request.form["jenis"],
             "kategori_id": request.form["kategori_id"],
-            "jumlah": float(request.form["jumlah"]),
+            "jumlah": jumlah,
             "keterangan": request.form.get("keterangan"),
             "metode": request.form.get("metode", "cash"),
             "bukti_url": bukti_url,
         }).execute()
+        entitas_id = hasil.data[0]["id"] if hasil.data else None
+        catat_log("tambah", "transaksi", entitas_id, f"{request.form['jenis']} Rp {jumlah:,.0f}")
         flash("Transaksi berhasil disimpan.", "success")
         return redirect(url_for("list_transaksi"))
 
@@ -392,6 +409,7 @@ def edit_transaksi(id):
             data_update["bukti_url"] = bukti_url_baru
 
         supabase.table("transaksi").update(data_update).eq("id", id).execute()
+        catat_log("edit", "transaksi", id, f"{data_update['jenis']} Rp {data_update['jumlah']:,.0f}")
         flash("Transaksi berhasil diperbarui.", "success")
         return redirect(url_for("list_transaksi"))
 
@@ -415,11 +433,13 @@ def hapus_bukti_storage(bukti_url):
 @login_required
 @admin_required
 def hapus_transaksi(id):
-    data = supabase.table("transaksi").select("bukti_url").eq("id", id).single().execute().data
+    data = supabase.table("transaksi").select("bukti_url, jenis, jumlah").eq("id", id).single().execute().data
     if data:
         hapus_bukti_storage(data.get("bukti_url"))
 
+    detail = f"{data.get('jenis')} Rp {data.get('jumlah', 0):,.0f}" if data else None
     supabase.table("transaksi").delete().eq("id", id).execute()
+    catat_log("hapus", "transaksi", id, detail)
     flash("Transaksi berhasil dihapus.", "success")
     return redirect(url_for("list_transaksi"))
 
@@ -429,10 +449,12 @@ def hapus_transaksi(id):
 @admin_required
 def kategori():
     if request.method == "POST":
-        supabase.table("kategori").insert({
+        hasil = supabase.table("kategori").insert({
             "nama": request.form["nama"],
             "jenis": request.form["jenis"],
         }).execute()
+        entitas_id = hasil.data[0]["id"] if hasil.data else None
+        catat_log("tambah", "kategori", entitas_id, request.form["nama"])
         return redirect(url_for("kategori"))
 
     data = supabase.table("kategori").select("*").execute().data
@@ -448,7 +470,9 @@ def hapus_kategori(id):
         flash("Kategori ini tidak bisa dihapus karena masih dipakai di transaksi yang ada.", "error")
         return redirect(url_for("kategori"))
 
+    nama_kat = supabase.table("kategori").select("nama").eq("id", id).single().execute().data
     supabase.table("kategori").delete().eq("id", id).execute()
+    catat_log("hapus", "kategori", id, nama_kat.get("nama") if nama_kat else None)
     flash("Kategori berhasil dihapus.", "success")
     return redirect(url_for("kategori"))
 
@@ -467,17 +491,39 @@ def users():
             return redirect(url_for("users"))
 
         role = request.form.get("role", "staff")
-        supabase.table("users").insert({
+        hasil = supabase.table("users").insert({
             "username": username,
             "nama": nama,
             "password_hash": generate_password_hash(password),
             "role": role,
         }).execute()
-        flash(f"User '{username}' berhasil ditambahkan.", "success")
+        entitas_id = hasil.data[0]["id"] if hasil.data else None
+        catat_log("tambah", "user", entitas_id, f"{username} ({role})")
+        flash(f"User '{username}' berhasil ditambahkan.", "success")    
         return redirect(url_for("users"))
 
     data = supabase.table("users").select("id, username, nama, role, created_at").order("id").execute().data
     return render_template("users/list.html", users=data)
+
+
+@app.route("/users/hapus/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def hapus_user(id):
+    if str(id) == str(current_user.id):
+        flash("Tidak bisa menghapus akun yang sedang login.", "error")
+        return redirect(url_for("users"))
+
+    total_user = supabase.table("users").select("id").execute().data
+    if len(total_user) <= 1:
+        flash("Tidak bisa menghapus, minimal harus ada 1 user.", "error")
+        return redirect(url_for("users"))
+
+    user_lama = supabase.table("users").select("username").eq("id", id).single().execute().data
+    supabase.table("users").delete().eq("id", id).execute()
+    catat_log("hapus", "user", id, user_lama.get("username") if user_lama else None)
+    flash("User berhasil dihapus.", "success")
+    return redirect(url_for("users"))
 
 
 @app.route("/pengaturan", methods=["GET", "POST"])
@@ -491,11 +537,20 @@ def pengaturan():
             supabase.table("saldo_kas").update({"saldo": saldo_baru}).eq("id", existing[0]["id"]).execute()
         else:
             supabase.table("saldo_kas").insert({"saldo": saldo_baru}).execute()
+        catat_log("edit", "pengaturan", None, f"Saldo awal diubah jadi Rp {saldo_baru:,.0f}")
         flash("Saldo awal berhasil disimpan.", "success")
         return redirect(url_for("pengaturan"))
 
     saldo_awal = get_saldo_awal()
     return render_template("pengaturan.html", saldo_awal=saldo_awal)
+
+
+@app.route("/audit-log")
+@login_required
+@admin_required
+def audit_log():
+    data = supabase.table("audit_log").select("*").order("created_at", desc=True).limit(100).execute().data
+    return render_template("audit_log.html", logs=data)
 
 @app.route("/laporan")
 @login_required
