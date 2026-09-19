@@ -25,6 +25,13 @@ app.config.from_object(Config)
 supabase = create_client(app.config["SUPABASE_URL"], app.config["SUPABASE_KEY"])
 
 
+def get_saldo_awal():
+    data = supabase.table("saldo_kas").select("saldo").limit(1).execute().data
+    if data:
+        return data[0]["saldo"]
+    return 0
+
+
 @app.after_request
 def set_security_headers(response):
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -242,7 +249,7 @@ def dashboard():
 
     sum_masuk = sum(t["jumlah"] for t in total_masuk)
     sum_keluar = sum(t["jumlah"] for t in total_keluar)
-    saldo = sum_masuk - sum_keluar
+    saldo = get_saldo_awal() + sum_masuk - sum_keluar
 
     bulan_list = get_bulan_terakhir(6)
     awal = date(bulan_list[0][0], bulan_list[0][1], 1)
@@ -473,32 +480,43 @@ def users():
     return render_template("users/list.html", users=data)
 
 
-@app.route("/users/hapus/<int:id>", methods=["POST"])
+@app.route("/pengaturan", methods=["GET", "POST"])
 @login_required
 @admin_required
-def hapus_user(id):
-    if str(id) == str(current_user.id):
-        flash("Tidak bisa menghapus akun yang sedang login.", "error")
-        return redirect(url_for("users"))
+def pengaturan():
+    if request.method == "POST":
+        saldo_baru = float(request.form["saldo_awal"])
+        existing = supabase.table("saldo_kas").select("id").limit(1).execute().data
+        if existing:
+            supabase.table("saldo_kas").update({"saldo": saldo_baru}).eq("id", existing[0]["id"]).execute()
+        else:
+            supabase.table("saldo_kas").insert({"saldo": saldo_baru}).execute()
+        flash("Saldo awal berhasil disimpan.", "success")
+        return redirect(url_for("pengaturan"))
 
-    total_user = supabase.table("users").select("id").execute().data
-    if len(total_user) <= 1:
-        flash("Tidak bisa menghapus, minimal harus ada 1 user.", "error")
-        return redirect(url_for("users"))
-
-    supabase.table("users").delete().eq("id", id).execute()
-    flash("User berhasil dihapus.", "success")
-    return redirect(url_for("users"))
+    saldo_awal = get_saldo_awal()
+    return render_template("pengaturan.html", saldo_awal=saldo_awal)
 
 @app.route("/laporan")
 @login_required
 def laporan():
     bulan = request.args.get("bulan")
     query = supabase.table("transaksi").select("*, kategori(nama)")
+
     if bulan:
         tahun, bln = map(int, bulan.split("-"))
         hari_terakhir = calendar.monthrange(tahun, bln)[1]
-        query = query.gte("tanggal", f"{bulan}-01").lte("tanggal", f"{bulan}-{hari_terakhir:02d}")
+        awal_periode = f"{bulan}-01"
+        akhir_periode = f"{bulan}-{hari_terakhir:02d}"
+        query = query.gte("tanggal", awal_periode).lte("tanggal", akhir_periode)
+
+        sebelum = supabase.table("transaksi").select("jenis, jumlah").lt("tanggal", awal_periode).execute().data
+        masuk_sebelum = sum(t["jumlah"] for t in sebelum if t["jenis"] == "masuk")
+        keluar_sebelum = sum(t["jumlah"] for t in sebelum if t["jenis"] == "keluar")
+        saldo_awal_periode = get_saldo_awal() + masuk_sebelum - keluar_sebelum
+    else:
+        saldo_awal_periode = get_saldo_awal()
+
     transaksi = query.order("tanggal").execute().data
 
     rekap = {}
@@ -509,11 +527,14 @@ def laporan():
 
     total_masuk = sum(t["jumlah"] for t in transaksi if t["jenis"] == "masuk")
     total_keluar = sum(t["jumlah"] for t in transaksi if t["jenis"] == "keluar")
+    saldo_akhir_periode = saldo_awal_periode + total_masuk - total_keluar
 
     return render_template("laporan.html",
                            rekap=rekap,
                            total_masuk=total_masuk,
                            total_keluar=total_keluar,
+                           saldo_awal_periode=saldo_awal_periode,
+                           saldo_akhir_periode=saldo_akhir_periode,
                            bulan=bulan)
 def get_data_laporan(bulan):
     query = supabase.table("transaksi").select("*, kategori(nama)")

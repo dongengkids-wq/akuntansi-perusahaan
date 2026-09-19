@@ -22,6 +22,7 @@
                 <a href="{{ url_for('laporan') }}" class="{{ 'active' if request.path == url_for('laporan') else '' }}">Laporan</a>
                 {% if current_user.role == 'admin' %}
                 <a href="{{ url_for('users') }}" class="{{ 'active' if request.path == url_for('users') else '' }}">Users</a>
+                <a href="{{ url_for('pengaturan') }}" class="{{ 'active' if request.path == url_for('pengaturan') else '' }}">Pengaturan</a>
                 {% endif %}
             </nav>
             <div class="sidebar-footer">

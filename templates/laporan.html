@@ -13,6 +13,10 @@
 </form>
 
 <div class="card-row">
+    <div class="stat-card">
+        <span class="stat-label">Saldo Awal Periode</span>
+        <span class="stat-value">Rp {{ "{:,.0f}".format(saldo_awal_periode) }}</span>
+    </div>
     <div class="stat-card stat-masuk">
         <span class="stat-label">Total Masuk</span>
         <span class="stat-value">Rp {{ "{:,.0f}".format(total_masuk) }}</span>
@@ -22,8 +26,8 @@
         <span class="stat-value">Rp {{ "{:,.0f}".format(total_keluar) }}</span>
     </div>
     <div class="stat-card stat-saldo">
-        <span class="stat-label">Saldo</span>
-        <span class="stat-value">Rp {{ "{:,.0f}".format(total_masuk - total_keluar) }}</span>
+        <span class="stat-label">Saldo Akhir Periode</span>
+        <span class="stat-value">Rp {{ "{:,.0f}".format(saldo_akhir_periode) }}</span>
     </div>
 </div>
 
