@@ -22,6 +22,26 @@
     <canvas id="trendChart" height="90"></canvas>
 </div>
 
+<h2>Breakdown Kategori Bulan Ini</h2>
+<div class="card-row" style="margin-bottom: 32px;">
+    <div class="stat-card" style="flex: 1; min-width: 260px;">
+        <span class="stat-label">Pemasukan per Kategori</span>
+        {% if kategori_masuk_labels %}
+            <canvas id="pieMasuk" height="220"></canvas>
+        {% else %}
+            <p class="field-hint" style="margin-top: 12px;">Belum ada data bulan ini.</p>
+        {% endif %}
+    </div>
+    <div class="stat-card" style="flex: 1; min-width: 260px;">
+        <span class="stat-label">Pengeluaran per Kategori</span>
+        {% if kategori_keluar_labels %}
+            <canvas id="pieKeluar" height="220"></canvas>
+        {% else %}
+            <p class="field-hint" style="margin-top: 12px;">Belum ada data bulan ini.</p>
+        {% endif %}
+    </div>
+</div>
+
 <h2>Transaksi Terakhir</h2>
 <table class="ledger-table">
     <thead>
@@ -92,6 +112,61 @@ new Chart(ctx, {
         }
     }
 });
+
+const paletteMasuk = ['#2F6F4E', '#4D9470', '#7BB89A', '#A6D4BE', '#CDE8DA', '#1F5238'];
+const paletteKeluar = ['#9C3B2A', '#B85B49', '#D08272', '#E3AA9F', '#F0CCC5', '#6E2A1E'];
+
+{% if kategori_masuk_labels %}
+new Chart(document.getElementById('pieMasuk').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ kategori_masuk_labels | tojson }},
+        datasets: [{
+            data: {{ kategori_masuk_values | tojson }},
+            backgroundColor: paletteMasuk
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'bottom', labels: { font: { family: 'IBM Plex Sans', size: 12 }, boxWidth: 12 } },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        return ctx.label + ': Rp ' + ctx.raw.toLocaleString('id-ID');
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
+
+{% if kategori_keluar_labels %}
+new Chart(document.getElementById('pieKeluar').getContext('2d'), {
+    type: 'doughnut',
+    data: {
+        labels: {{ kategori_keluar_labels | tojson }},
+        datasets: [{
+            data: {{ kategori_keluar_values | tojson }},
+            backgroundColor: paletteKeluar
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'bottom', labels: { font: { family: 'IBM Plex Sans', size: 12 }, boxWidth: 12 } },
+            tooltip: {
+                callbacks: {
+                    label: function(ctx) {
+                        return ctx.label + ': Rp ' + ctx.raw.toLocaleString('id-ID');
+                    }
+                }
+            }
+        }
+    }
+});
+{% endif %}
 </script>
 {% endblock %}
 {% endblock %}

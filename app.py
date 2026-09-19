@@ -296,6 +296,23 @@ def dashboard():
         chart_masuk.append(total_m)
         chart_keluar.append(total_k)
 
+    # Breakdown per kategori untuk bulan berjalan
+    today = date.today()
+    awal_bulan_ini = date(today.year, today.month, 1)
+    akhir_bulan_ini = date(today.year, today.month, calendar.monthrange(today.year, today.month)[1])
+
+    data_bulan_ini = supabase.table("transaksi").select("jenis, jumlah, kategori(nama)") \
+        .gte("tanggal", str(awal_bulan_ini)).lte("tanggal", str(akhir_bulan_ini)).execute().data
+
+    kategori_masuk = {}
+    kategori_keluar = {}
+    for t in data_bulan_ini:
+        nama_kat = t["kategori"]["nama"] if t.get("kategori") else "Tanpa Kategori"
+        if t["jenis"] == "masuk":
+            kategori_masuk[nama_kat] = kategori_masuk.get(nama_kat, 0) + t["jumlah"]
+        else:
+            kategori_keluar[nama_kat] = kategori_keluar.get(nama_kat, 0) + t["jumlah"]
+
     return render_template("dashboard.html",
                            transaksi=transaksi,
                            sum_masuk=sum_masuk,
@@ -303,7 +320,11 @@ def dashboard():
                            saldo=saldo,
                            chart_labels=chart_labels,
                            chart_masuk=chart_masuk,
-                           chart_keluar=chart_keluar)
+                           chart_keluar=chart_keluar,
+                           kategori_masuk_labels=list(kategori_masuk.keys()),
+                           kategori_masuk_values=list(kategori_masuk.values()),
+                           kategori_keluar_labels=list(kategori_keluar.keys()),
+                           kategori_keluar_values=list(kategori_keluar.values()))
 
 
 def upload_bukti(file):
