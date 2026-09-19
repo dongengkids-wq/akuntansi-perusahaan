@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Transaksi Berulang</h1>
+<p class="field-hint" style="margin-bottom: 20px;">Transaksi baru otomatis dibuat saat jatuh tempo, setiap kali dashboard dibuka.</p>
+
+<div class="form-card" style="max-width: none;">
+    <form method="POST" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="field" style="margin-bottom: 0; min-width: 120px;">
+            <label for="jenis">Jenis</label>
+            <select id="jenis" name="jenis" required>
+                <option value="masuk">Masuk</option>
+                <option value="keluar">Keluar</option>
+            </select>
+        </div>
+        <div class="field" style="margin-bottom: 0; min-width: 160px;">
+            <label for="kategori_id">Kategori</label>
+            <select id="kategori_id" name="kategori_id" required>
+                {% for k in kategori_list %}
+                <option value="{{ k.id }}">{{ k.nama }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="field" style="margin-bottom: 0; min-width: 140px;">
+            <label for="jumlah">Jumlah</label>
+            <input type="number" id="jumlah" name="jumlah" step="0.01" required>
+        </div>
+        <div class="field" style="margin-bottom: 0; min-width: 160px;">
+            <label for="tanggal_mulai">Mulai Tanggal</label>
+            <input type="date" id="tanggal_mulai" name="tanggal_mulai" required>
+        </div>
+        <div class="field" style="margin-bottom: 0; min-width: 180px;">
+            <label for="keterangan">Keterangan</label>
+            <input type="text" id="keterangan" name="keterangan">
+        </div>
+        <button type="submit" class="btn">Tambah</button>
+    </form>
+</div>
+
+<table class="ledger-table">
+    <thead>
+        <tr>
+            <th>Jenis</th>
+            <th>Kategori</th>
+            <th class="col-amount">Jumlah</th>
+            <th>Keterangan</th>
+            <th>Jatuh Tempo Berikutnya</th>
+            <th>Status</th>
+            <th>Aksi</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for a in aturan %}
+    <tr>
+        <td>
+            {% if a.jenis == 'masuk' %}
+                <span class="tag tag-masuk">Masuk</span>
+            {% else %}
+                <span class="tag tag-keluar">Keluar</span>
+            {% endif %}
+        </td>
+        <td>{{ a.kategori.nama if a.kategori else '-' }}</td>
+        <td class="col-amount">Rp {{ "{:,.0f}".format(a.jumlah) }}</td>
+        <td>{{ a.keterangan or '-' }}</td>
+        <td>{{ a.tanggal_berikutnya }}</td>
+        <td>
+            {% if a.aktif %}
+                <span class="tag tag-masuk">Aktif</span>
+            {% else %}
+                <span class="tag">Nonaktif</span>
+            {% endif %}
+        </td>
+        <td>
+            <div class="actions-row">
+                <form method="POST" action="{{ url_for('toggle_transaksi_berulang', id=a.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-link">{{ 'Nonaktifkan' if a.aktif else 'Aktifkan' }}</button>
+                </form>
+                <form method="POST" action="{{ url_for('hapus_transaksi_berulang', id=a.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin hapus aturan ini?')">Hapus</button>
+                </form>
+            </div>
+        </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="7">Belum ada transaksi berulang.</td></tr>
+    {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

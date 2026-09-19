@@ -15,7 +15,10 @@
             <div class="brand">Buku Kas</div>
             <nav class="side-nav">
                 <a href="{{ url_for('dashboard') }}" class="{{ 'active' if request.path == url_for('dashboard') else '' }}">Dashboard</a>
-                <a href="{{ url_for('list_transaksi') }}" class="{{ 'active' if request.path.startswith('/transaksi') else '' }}">Transaksi</a>
+                <a href="{{ url_for('list_transaksi') }}" class="{{ 'active' if request.path.startswith('/transaksi') and not request.path.startswith('/transaksi-berulang') else '' }}">Transaksi</a>
+                {% if current_user.role == 'admin' %}
+                <a href="{{ url_for('transaksi_berulang') }}" class="{{ 'active' if request.path.startswith('/transaksi-berulang') else '' }}">Berulang</a>
+                {% endif %}
                 {% if current_user.role == 'admin' %}
                 <a href="{{ url_for('kategori') }}" class="{{ 'active' if request.path == url_for('kategori') else '' }}">Kategori</a>
                 {% endif %}

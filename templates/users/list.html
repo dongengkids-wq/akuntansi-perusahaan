@@ -45,14 +45,20 @@
             {% endif %}
         </td>
         <td>
-            {% if u.id != current_user.id %}
-            <form method="POST" action="{{ url_for('hapus_user', id=u.id) }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin hapus user ini?')">Hapus</button>
-            </form>
-            {% else %}
-            <span class="field-hint">Akun kamu</span>
-            {% endif %}
+            <div class="actions-row">
+                <form method="POST" action="{{ url_for('generate_reset_link', id=u.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-link">Reset Password</button>
+                </form>
+                {% if u.id != current_user.id %}
+                <form method="POST" action="{{ url_for('hapus_user', id=u.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin hapus user ini?')">Hapus</button>
+                </form>
+                {% else %}
+                <span class="field-hint">Akun kamu</span>
+                {% endif %}
+            </div>
         </td>
     </tr>
     {% else %}

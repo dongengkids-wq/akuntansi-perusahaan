@@ -33,6 +33,30 @@ def get_saldo_awal():
     return 0
 
 
+def tambah_bulan(d, n=1):
+    m = d.month - 1 + n
+    y = d.year + m // 12
+    m = m % 12 + 1
+    hari = min(d.day, calendar.monthrange(y, m)[1])
+    return date(y, m, hari)
+
+
+def jalankan_transaksi_berulang():
+    today = date.today()
+    due = supabase.table("transaksi_berulang").select("*").eq("aktif", True).lte("tanggal_berikutnya", str(today)).execute().data
+    for r in due:
+        supabase.table("transaksi").insert({
+            "tanggal": r["tanggal_berikutnya"],
+            "jenis": r["jenis"],
+            "kategori_id": r["kategori_id"],
+            "jumlah": r["jumlah"],
+            "keterangan": r.get("keterangan"),
+            "metode": r.get("metode", "cash"),
+        }).execute()
+        tanggal_baru = tambah_bulan(date.fromisoformat(r["tanggal_berikutnya"]))
+        supabase.table("transaksi_berulang").update({"tanggal_berikutnya": str(tanggal_baru)}).eq("id", r["id"]).execute()
+
+
 def catat_log(aksi, entitas, entitas_id=None, detail=None):
     try:
         supabase.table("audit_log").insert({
@@ -266,6 +290,8 @@ def get_bulan_terakhir(n=6):
 @app.route("/")
 @login_required
 def dashboard():
+    jalankan_transaksi_berulang()
+
     transaksi = supabase.table("transaksi").select("*").order("tanggal", desc=True).limit(10).execute().data
     total_masuk = supabase.table("transaksi").select("jumlah").eq("jenis", "masuk").execute().data
     total_keluar = supabase.table("transaksi").select("jumlah").eq("jenis", "keluar").execute().data
@@ -467,11 +493,48 @@ def hapus_transaksi(id):
     if data:
         hapus_bukti_storage(data.get("bukti_url"))
 
-    detail = f"{data.get('jenis')} Rp {data.get('jumlah', 0):,.0f}" if data else None
-    supabase.table("transaksi").delete().eq("id", id).execute()
-    catat_log("hapus", "transaksi", id, detail)
-    flash("Transaksi berhasil dihapus.", "success")
-    return redirect(url_for("list_transaksi"))
+@app.route("/transaksi-berulang", methods=["GET", "POST"])
+@login_required
+@admin_required
+def transaksi_berulang():
+    kategori_list = supabase.table("kategori").select("*").execute().data
+
+    if request.method == "POST":
+        tanggal_mulai = request.form["tanggal_mulai"]
+        supabase.table("transaksi_berulang").insert({
+            "jenis": request.form["jenis"],
+            "kategori_id": request.form["kategori_id"],
+            "jumlah": float(request.form["jumlah"]),
+            "keterangan": request.form.get("keterangan"),
+            "metode": request.form.get("metode", "cash"),
+            "tanggal_mulai": tanggal_mulai,
+            "tanggal_berikutnya": tanggal_mulai,
+            "dibuat_oleh": current_user.id,
+        }).execute()
+        flash("Transaksi berulang berhasil dibuat.", "success")
+        return redirect(url_for("transaksi_berulang"))
+
+    data = supabase.table("transaksi_berulang").select("*, kategori(nama)").order("id").execute().data
+    return render_template("transaksi_berulang.html", aturan=data, kategori_list=kategori_list)
+
+
+@app.route("/transaksi-berulang/toggle/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def toggle_transaksi_berulang(id):
+    data = supabase.table("transaksi_berulang").select("aktif").eq("id", id).single().execute().data
+    if data:
+        supabase.table("transaksi_berulang").update({"aktif": not data["aktif"]}).eq("id", id).execute()
+    return redirect(url_for("transaksi_berulang"))
+
+
+@app.route("/transaksi-berulang/hapus/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def hapus_transaksi_berulang(id):
+    supabase.table("transaksi_berulang").delete().eq("id", id).execute()
+    flash("Transaksi berulang berhasil dihapus.", "success")
+    return redirect(url_for("transaksi_berulang"))
 
 
 @app.route("/kategori", methods=["GET", "POST"])
@@ -534,6 +597,54 @@ def users():
 
     data = supabase.table("users").select("id, username, nama, role, created_at").order("id").execute().data
     return render_template("users/list.html", users=data)
+
+
+@app.route("/users/reset-password/<int:id>", methods=["POST"])
+@login_required
+@admin_required
+def generate_reset_link(id):
+    token = secrets.token_urlsafe(24)
+    expires = (datetime.now(timezone.utc) + timedelta(minutes=30)).isoformat()
+    supabase.table("users").update({"reset_token": token, "reset_token_expires": expires}).eq("id", id).execute()
+    link = url_for("reset_password", token=token, _external=True)
+    flash(f"Link reset password (berlaku 30 menit, kirim manual ke user): {link}", "success")
+    return redirect(url_for("users"))
+
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+    user_data = supabase.table("users").select("*").eq("reset_token", token).execute().data
+    if not user_data:
+        flash("Link reset tidak valid atau sudah dipakai.", "error")
+        return redirect(url_for("login"))
+
+    user_data = user_data[0]
+    expires = user_data.get("reset_token_expires")
+    if expires:
+        expires_dt = datetime.fromisoformat(expires.replace("Z", "+00:00"))
+        if expires_dt < datetime.now(timezone.utc):
+            flash("Link reset sudah kadaluarsa, minta admin generate ulang.", "error")
+            return redirect(url_for("login"))
+
+    if request.method == "POST":
+        password_baru = request.form["password"]
+        konfirmasi = request.form["konfirmasi"]
+        if len(password_baru) < 6:
+            flash("Password minimal 6 karakter.", "error")
+            return render_template("reset_password.html")
+        if password_baru != konfirmasi:
+            flash("Konfirmasi password tidak sama.", "error")
+            return render_template("reset_password.html")
+
+        supabase.table("users").update({
+            "password_hash": generate_password_hash(password_baru),
+            "reset_token": None,
+            "reset_token_expires": None,
+        }).eq("id", user_data["id"]).execute()
+        flash("Password berhasil diubah. Silakan login.", "success")
+        return redirect(url_for("login"))
+
+    return render_template("reset_password.html")
 
 
 @app.route("/users/hapus/<int:id>", methods=["POST"])
