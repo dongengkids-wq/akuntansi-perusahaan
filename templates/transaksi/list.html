@@ -99,4 +99,31 @@
     {% endfor %}
     </tbody>
 </table>
+
+{% if total_pages > 1 %}
+<div class="pagination">
+    <span class="pagination-info">Halaman {{ page }} dari {{ total_pages }} ({{ total_data }} transaksi)</span>
+    <div class="pagination-links">
+        {% set base_args = {'jenis': filter_jenis, 'kategori_id': filter_kategori_id, 'tanggal_mulai': filter_tanggal_mulai, 'tanggal_akhir': filter_tanggal_akhir, 'q': filter_q} %}
+
+        {% if page > 1 %}
+        <a href="{{ url_for('list_transaksi', page=page-1, **base_args) }}" class="btn btn-link">&larr; Sebelumnya</a>
+        {% endif %}
+
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+                <span class="pagination-current">{{ p }}</span>
+            {% elif p == 1 or p == total_pages or (p >= page - 1 and p <= page + 1) %}
+                <a href="{{ url_for('list_transaksi', page=p, **base_args) }}">{{ p }}</a>
+            {% elif p == page - 2 or p == page + 2 %}
+                <span class="pagination-dots">...</span>
+            {% endif %}
+        {% endfor %}
+
+        {% if page < total_pages %}
+        <a href="{{ url_for('list_transaksi', page=page+1, **base_args) }}" class="btn btn-link">Selanjutnya &rarr;</a>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
 {% endblock %}

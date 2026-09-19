@@ -302,6 +302,60 @@ h2 {
     color: var(--accent-keluar);
 }
 
+.flash-error {
+    background: rgba(156,59,42,0.08);
+    border-color: var(--accent-keluar);
+    color: var(--accent-keluar);
+}
+
+.pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--rule);
+}
+
+.pagination-info {
+    font-size: 13px;
+    color: var(--ink-soft);
+}
+
+.pagination-links {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.pagination-links a {
+    text-decoration: none;
+    color: var(--accent-primary);
+    padding: 6px 10px;
+    border-radius: var(--radius);
+    font-size: 14px;
+}
+
+.pagination-links a:hover {
+    background: var(--paper-alt);
+}
+
+.pagination-current {
+    padding: 6px 10px;
+    background: var(--accent-primary);
+    color: var(--sidebar-text);
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.pagination-dots {
+    padding: 6px 4px;
+    color: var(--ink-soft);
+}
+
 @media (max-width: 760px) {
     .app-shell { flex-direction: column; }
     .sidebar {

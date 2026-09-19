@@ -161,20 +161,31 @@ def list_transaksi():
     tanggal_akhir = request.args.get("tanggal_akhir")
     q = request.args.get("q", "").strip()
 
-    query = supabase.table("transaksi").select("*, kategori(nama)")
+    page = request.args.get("page", 1, type=int)
+    if page < 1:
+        page = 1
+    per_page = 20
+    offset = (page - 1) * per_page
 
-    if jenis:
-        query = query.eq("jenis", jenis)
-    if kategori_id:
-        query = query.eq("kategori_id", kategori_id)
-    if tanggal_mulai:
-        query = query.gte("tanggal", tanggal_mulai)
-    if tanggal_akhir:
-        query = query.lte("tanggal", tanggal_akhir)
-    if q:
-        query = query.ilike("keterangan", f"%{q}%")
+    def build_query():
+        query = supabase.table("transaksi").select("*, kategori(nama)", count="exact")
+        if jenis:
+            query = query.eq("jenis", jenis)
+        if kategori_id:
+            query = query.eq("kategori_id", kategori_id)
+        if tanggal_mulai:
+            query = query.gte("tanggal", tanggal_mulai)
+        if tanggal_akhir:
+            query = query.lte("tanggal", tanggal_akhir)
+        if q:
+            query = query.ilike("keterangan", f"%{q}%")
+        return query
 
-    data = query.order("tanggal", desc=True).execute().data
+    result = build_query().order("tanggal", desc=True).range(offset, offset + per_page - 1).execute()
+    data = result.data
+    total_data = result.count or 0
+    total_pages = max(1, -(-total_data // per_page))  # pembulatan ke atas
+
     kategori_list = supabase.table("kategori").select("*").execute().data
 
     return render_template("transaksi/list.html",
@@ -184,7 +195,10 @@ def list_transaksi():
                            filter_kategori_id=kategori_id,
                            filter_tanggal_mulai=tanggal_mulai,
                            filter_tanggal_akhir=tanggal_akhir,
-                           filter_q=q)
+                           filter_q=q,
+                           page=page,
+                           total_pages=total_pages,
+                           total_data=total_data)
 
 
 @app.route("/transaksi/tambah", methods=["GET", "POST"])
