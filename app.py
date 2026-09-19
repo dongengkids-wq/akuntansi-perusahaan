@@ -142,8 +142,36 @@ def upload_bukti(file):
 @app.route("/transaksi")
 @login_required
 def list_transaksi():
-    data = supabase.table("transaksi").select("*, kategori(nama)").order("tanggal", desc=True).execute().data
-    return render_template("transaksi/list.html", transaksi=data)
+    jenis = request.args.get("jenis")
+    kategori_id = request.args.get("kategori_id")
+    tanggal_mulai = request.args.get("tanggal_mulai")
+    tanggal_akhir = request.args.get("tanggal_akhir")
+    q = request.args.get("q", "").strip()
+
+    query = supabase.table("transaksi").select("*, kategori(nama)")
+
+    if jenis:
+        query = query.eq("jenis", jenis)
+    if kategori_id:
+        query = query.eq("kategori_id", kategori_id)
+    if tanggal_mulai:
+        query = query.gte("tanggal", tanggal_mulai)
+    if tanggal_akhir:
+        query = query.lte("tanggal", tanggal_akhir)
+    if q:
+        query = query.ilike("keterangan", f"%{q}%")
+
+    data = query.order("tanggal", desc=True).execute().data
+    kategori_list = supabase.table("kategori").select("*").execute().data
+
+    return render_template("transaksi/list.html",
+                           transaksi=data,
+                           kategori_list=kategori_list,
+                           filter_jenis=jenis,
+                           filter_kategori_id=kategori_id,
+                           filter_tanggal_mulai=tanggal_mulai,
+                           filter_tanggal_akhir=tanggal_akhir,
+                           filter_q=q)
 
 
 @app.route("/transaksi/tambah", methods=["GET", "POST"])

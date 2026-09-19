@@ -3,6 +3,47 @@
 <h1>Daftar Transaksi</h1>
 <p style="margin: -8px 0 24px;"><a href="{{ url_for('tambah_transaksi') }}" class="btn">+ Tambah Transaksi</a></p>
 
+<div class="form-card" style="max-width: none;">
+    <form method="GET" style="display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
+        <div class="field" style="margin-bottom: 0; min-width: 140px;">
+            <label for="jenis">Jenis</label>
+            <select id="jenis" name="jenis">
+                <option value="">Semua</option>
+                <option value="masuk" {{ 'selected' if filter_jenis == 'masuk' }}>Masuk</option>
+                <option value="keluar" {{ 'selected' if filter_jenis == 'keluar' }}>Keluar</option>
+            </select>
+        </div>
+
+        <div class="field" style="margin-bottom: 0; min-width: 160px;">
+            <label for="kategori_id">Kategori</label>
+            <select id="kategori_id" name="kategori_id">
+                <option value="">Semua</option>
+                {% for k in kategori_list %}
+                <option value="{{ k.id }}" {{ 'selected' if filter_kategori_id == k.id|string }}>{{ k.nama }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="field" style="margin-bottom: 0; min-width: 150px;">
+            <label for="tanggal_mulai">Dari Tanggal</label>
+            <input type="date" id="tanggal_mulai" name="tanggal_mulai" value="{{ filter_tanggal_mulai or '' }}">
+        </div>
+
+        <div class="field" style="margin-bottom: 0; min-width: 150px;">
+            <label for="tanggal_akhir">Sampai Tanggal</label>
+            <input type="date" id="tanggal_akhir" name="tanggal_akhir" value="{{ filter_tanggal_akhir or '' }}">
+        </div>
+
+        <div class="field" style="margin-bottom: 0; min-width: 180px; flex: 1;">
+            <label for="q">Cari Keterangan</label>
+            <input type="text" id="q" name="q" placeholder="misal: gaji, sewa..." value="{{ filter_q or '' }}">
+        </div>
+
+        <button type="submit" class="btn">Filter</button>
+        <a href="{{ url_for('list_transaksi') }}" class="btn btn-link">Reset</a>
+    </form>
+</div>
+
 <table class="ledger-table">
     <thead>
         <tr>
