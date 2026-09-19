@@ -86,6 +86,7 @@
             <div class="actions-row">
                 <a href="{{ url_for('edit_transaksi', id=t.id) }}" class="btn btn-link">Edit</a>
                 <form method="POST" action="{{ url_for('hapus_transaksi', id=t.id) }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin hapus transaksi ini?')">Hapus</button>
                 </form>
             </div>

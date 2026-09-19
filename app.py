@@ -17,6 +17,7 @@ from datetime import date, datetime, timezone, timedelta
 import calendar
 import uuid
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from flask_wtf.csrf import CSRFProtect, CSRFError
 from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
@@ -57,6 +58,14 @@ def set_security_headers(response):
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "login"
+
+csrf = CSRFProtect(app)
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(e):
+    flash("Sesi form sudah kadaluarsa, silakan coba lagi.", "error")
+    return redirect(request.referrer or url_for("dashboard"))
 
 
 from functools import wraps

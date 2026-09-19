@@ -5,6 +5,7 @@
 <div class="form-card">
     <p class="field-hint" style="margin-bottom: 16px;">Saldo ini merepresentasikan kas yang sudah ada sebelum aplikasi ini mulai dipakai mencatat transaksi. Semua laporan dan dashboard akan menghitung dari angka ini sebagai dasar.</p>
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="saldo_awal">Saldo Awal (Rp)</label>
             <input type="number" id="saldo_awal" name="saldo_awal" step="0.01" value="{{ saldo_awal }}" required>

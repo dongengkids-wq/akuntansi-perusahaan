@@ -24,6 +24,7 @@
                 {% endfor %}
             {% endwith %}
             <form method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <div class="field">
                     <label for="kode">Kode dari aplikasi authenticator</label>
                     <input type="text" id="kode" name="kode" inputmode="numeric" autocomplete="one-time-code" required autofocus>

@@ -4,6 +4,7 @@
 
 <div class="form-card">
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="nama">Nama Kategori</label>
             <input type="text" id="nama" name="nama" required>
@@ -36,6 +37,7 @@
         </td>
         <td>
             <form method="POST" action="{{ url_for('hapus_kategori', id=k.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-danger" onclick="return confirm('Yakin hapus kategori ini?')">Hapus</button>
             </form>
         </td>

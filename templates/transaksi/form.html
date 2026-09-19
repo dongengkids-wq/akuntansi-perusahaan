@@ -4,6 +4,7 @@
 
 <div class="form-card">
 <form method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <div class="field">
         <label for="tanggal">Tanggal</label>
         <input type="date" id="tanggal" name="tanggal" value="{{ transaksi.tanggal if transaksi else '' }}">

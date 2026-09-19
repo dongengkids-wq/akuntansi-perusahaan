@@ -9,6 +9,7 @@
 
     <p style="margin-top: 20px;">2. Masukkan kode 6 digit dari aplikasi untuk konfirmasi:</p>
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <div class="field">
             <label for="kode">Kode Verifikasi</label>
             <input type="text" id="kode" name="kode" inputmode="numeric" required autofocus>
